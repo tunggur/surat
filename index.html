@@ -3,403 +3,436 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aplikasi Surat Online Desa</title>
+  <title>Sistem Pelayanan Surat Online Desa</title>
+  <!-- Bootstrap 5 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Chart.js & Mammoth.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <style>
-    body { background-color: #f8f9fa; }
-    .sidebar { min-height: 100vh; background: #1e293b; color: #fff; }
-    .sidebar .nav-link { color: #cbd5e1; margin-bottom: 5px; cursor: pointer; }
-    .sidebar .nav-link.active, .sidebar .nav-link:hover { background: #334155; color: #fff; border-radius: 6px; }
-    .print-area { background: #fff; padding: 40px; border: 1px solid #ccc; min-height: 800px; }
     @media print {
       body * { visibility: hidden; }
-      #printablePaper, #printablePaper * { visibility: visible; }
-      #printablePaper { position: absolute; left: 0; top: 0; width: 100%; border: none; padding: 0; }
+      #areaCetak, #areaCetak * { visibility: visible; }
+      #areaCetak { position: absolute; left: 0; top: 0; width: 100%; }
+      .no-print { display: none !important; }
     }
   </style>
 </head>
-<body>
+<body class="bg-light">
 
-<!-- VIEW LOGIN -->
-<div id="loginView" class="container d-flex justify-content-center align-items-center" style="min-height: 100vh;">
-  <div class="card p-4 shadow" style="width: 360px;">
-    <h4 class="text-center mb-3 fw-bold text-primary">Surat Online Desa</h4>
-    <div id="loginAlert"></div>
-    <form id="formLogin">
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary no-print">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-bold" href="#">Surat Online Desa</a>
+    <div id="userInfo" class="text-white me-3 d-none"></div>
+    <button id="btnLogout" class="btn btn-outline-light btn-sm d-none" onclick="logout()">Logout</button>
+  </div>
+</nav>
+
+<div class="container my-4">
+  <!-- FORM LOGIN -->
+  <div id="secLogin" class="card mx-auto no-print" style="max-width: 400px;">
+    <div class="card-body">
+      <h4 class="card-title text-center mb-3">Login System</h4>
       <div class="mb-3">
-        <label class="form-label">Username / NIK</label>
-        <input type="text" id="loginUser" class="form-control" required>
+        <label>Username / NIK</label>
+        <input type="text" id="loginUser" class="form-control" placeholder="Masukkan NIK/Admin">
       </div>
       <div class="mb-3">
-        <label class="form-label">Password</label>
-        <input type="password" id="loginPass" class="form-control" required>
+        <label>Password</label>
+        <input type="password" id="loginPass" class="form-control">
       </div>
-      <button type="submit" id="btnLogin" class="btn btn-primary w-100">Masuk</button>
-    </form>
+      <button class="btn btn-primary w-100" onclick="doLogin()">Masuk</button>
+    </div>
+  </div>
+
+  <!-- DASHBOARD / MAIN INTERFACE -->
+  <div id="secDashboard" class="d-none">
+    <div class="row no-print mb-3">
+      <div class="col-md-12">
+        <div class="btn-group w-100" role="group">
+          <button class="btn btn-outline-primary active" id="btnNavBuat" onclick="switchTab('buatSurat')">Buat Surat</button>
+          <button class="btn btn-outline-primary admin-only" id="btnNavPenduduk" onclick="switchTab('penduduk')">Data Penduduk</button>
+          <button class="btn btn-outline-primary admin-only" id="btnNavTemplate" onclick="switchTab('template')">Format Surat (Docx)</button>
+          <button class="btn btn-outline-primary" id="btnNavRiwayat" onclick="switchTab('riwayat')">Riwayat Surat</button>
+          <button class="btn btn-outline-primary admin-only" id="btnNavLaporan" onclick="switchTab('laporan')">Laporan & Grafik</button>
+          <button class="btn btn-outline-secondary" onclick="openModalPass()">Ubah Password</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 1: BUAT SURAT -->
+    <div id="tabBuatSurat" class="tab-content">
+      <div class="card no-print">
+        <div class="card-header bg-white"><h5>Form Pembuatan Surat</h5></div>
+        <div class="card-body">
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Cari Penduduk (NIK / Nama):</label>
+              <div class="input-group">
+                <input type="text" id="searchKey" class="form-control" placeholder="Ketik NIK atau Nama...">
+                <button class="btn btn-secondary" onclick="cariPenduduk()">Cari</button>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Pilih Format Surat:</label>
+              <select id="selectTemplate" class="form-select" onchange="renderSurat()"></select>
+            </div>
+          </div>
+          <div id="searchResult" class="list-group mb-3"></div>
+          
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label>Nomor Surat:</label>
+              <input type="text" id="noSurat" class="form-control" value="470/01/DS/2026">
+            </div>
+            <div class="col-md-6 d-flex align-items-end">
+              <button class="btn btn-success me-2" onclick="simpanDanCetak()">Simpan & Cetak Surat</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AREA PREVIEW SURAT & CETAK -->
+      <div class="card mt-3">
+        <div class="card-header no-print">Pratinjau Cetak HTML</div>
+        <div class="card-body p-5 bg-white" id="areaCetak" style="min-height: 500px; border: 1px solid #ddd;">
+          <div class="text-center text-muted">Silakan pilih penduduk dan template surat di atas</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: DATA PENDUDUK (ADMIN ONLY) -->
+    <div id="tabPenduduk" class="tab-content d-none admin-only">
+      <div class="card no-print">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+          <h5 class="m-0">Kelola Data Penduduk</h5>
+        </div>
+        <div class="card-body">
+          <form id="formPenduduk" class="row g-2">
+            <!-- Dynamic Fields -->
+            <div class="col-md-3"><input type="text" class="form-control" id="p_NIK" placeholder="NIK" required></div>
+            <div class="col-md-3"><input type="text" class="form-control" id="p_Nama_Lengkap" placeholder="Nama Lengkap" required></div>
+            <div class="col-md-3"><input type="text" class="form-control" id="p_No_KK" placeholder="No. KK"></div>
+            <div class="col-md-3"><input type="text" class="form-control" id="p_Nama_KK" placeholder="Nama KK"></div>
+            <div class="col-md-4"><input type="text" class="form-control" id="p_Alamat" placeholder="Alamat"></div>
+            <div class="col-md-1"><input type="text" class="form-control" id="p_RT" placeholder="RT"></div>
+            <div class="col-md-1"><input type="text" class="form-control" id="p_RW" placeholder="RW"></div>
+            <div class="col-md-3">
+              <select class="form-select" id="p_Jenis_Kelamin"><option value="L">Laki-Laki</option><option value="P">Perempuan</option></select>
+            </div>
+            <div class="col-md-3"><input type="text" class="form-control" id="p_Tempat_Lahir" placeholder="Tempat Lahir"></div>
+            <div class="col-md-3"><input type="date" class="form-control" id="p_Tgl_Lahir"></div>
+            <div class="col-md-3"><input type="text" class="form-control" id="p_Agama" placeholder="Agama"></div>
+            <div class="col-md-3"><input type="text" class="form-control" id="p_Pekerjaan" placeholder="Pekerjaan"></div>
+            <div class="col-md-3"><input type="text" class="form-control" id="p_Status" placeholder="Status Perkawinan"></div>
+            <div class="col-md-3"><input type="text" class="form-control" id="p_Nama_Ayah" placeholder="Nama Ayah"></div>
+            <div class="col-md-3"><input type="text" class="form-control" id="p_Nama_Ibu" placeholder="Nama Ibu"></div>
+            <div class="col-12 mt-3">
+              <button type="button" class="btn btn-primary" onclick="simpanPenduduk()">Simpan Data Penduduk</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: TEMPLATE SURAT (DOCX IMPORT) -->
+    <div id="tabTemplate" class="tab-content d-none admin-only">
+      <div class="card no-print">
+        <div class="card-header bg-white"><h5>Manajemen Format Surat (.docx)</h5></div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label>Upload File Word (.docx):</label>
+            <input type="file" id="docxFile" class="form-control" accept=".docx" onchange="convertDocxToHTML()">
+            <small class="text-muted">Gunakan placeholder seperti {{Nama_Lengkap}}, {{NIK}}, {{Alamat}}, {{Pekerjaan}} di dalam dokumen Word.</small>
+          </div>
+          <div class="mb-3">
+            <label>Nama Surat / Jenis Surat:</label>
+            <input type="text" id="tmplNama" class="form-control" placeholder="Contoh: Surat Keterangan Usaha">
+          </div>
+          <div class="mb-3">
+            <label>Hasil Konversi HTML (Bisa di-edit manual):</label>
+            <textarea id="tmplHTML" class="form-control" rows="8"></textarea>
+          </div>
+          <button class="btn btn-success" onclick="simpanTemplate()">Simpan Format Surat</button>
+
+          <hr class="my-4">
+          <h5>Daftar Format Surat</h5>
+          <table class="table table-bordered mt-2">
+            <thead><tr><th>Nama Surat</th><th>Aksi</th></tr></thead>
+            <tbody id="listTemplate"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: RIWAYAT SURAT -->
+    <div id="tabRiwayat" class="tab-content d-none">
+      <div class="card no-print">
+        <div class="card-header bg-white"><h5>Riwayat Surat Terbuat</h5></div>
+        <div class="card-body">
+          <table class="table table-hover">
+            <thead><tr><th>No Surat</th><th>NIK</th><th>Nama</th><th>Jenis Surat</th><th>Tanggal</th><th>Aksi</th></tr></thead>
+            <tbody id="listRiwayat"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: LAPORAN & GRAFIK -->
+    <div id="tabLaporan" class="tab-content d-none admin-only">
+      <div class="card no-print">
+        <div class="card-header bg-white"><h5>Laporan Bulanan & Tahunan</h5></div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6"><canvas id="chartSurat"></canvas></div>
+            <div class="col-md-6">
+              <table class="table table-striped" id="tblLaporan">
+                <thead><tr><th>Jenis Surat</th><th>Jumlah Diterbitkan</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
-<!-- VIEW UTAMA -->
-<div id="mainView" class="d-none">
-  <div class="container-fluid">
-    <div class="row">
-      <!-- Sidebar Navigation -->
-      <div class="col-md-2 sidebar p-3">
-        <h5 class="fw-bold mb-4 text-warning">Layanan Desa</h5>
-        <div class="mb-3 text-muted small">User: <span id="sessNama" class="text-white fw-bold"></span> (<span id="sessRole"></span>)</div>
-        <ul class="nav nav-pills flex-column">
-          <li class="nav-item" id="menuCari"><a class="nav-link active" onclick="switchTab('tabCari')">🔍 Cari Penduduk & Buat Surat</a></li>
-          <li class="nav-item" id="menuArsip"><a class="nav-link" onclick="switchTab('tabArsip')">📂 Arsip Surat</a></li>
-          <li class="nav-item" id="menuTemplate"><a class="nav-link" onclick="switchTab('tabTemplate')">📄 Kelola Template (Docx)</a></li>
-          <li class="nav-item" id="menuLaporan"><a class="nav-link" onclick="switchTab('tabLaporan')">📊 Laporan & Grafik</a></li>
-          <li class="nav-item"><a class="nav-link" onclick="switchTab('tabPass')">🔑 Ubah Password</a></li>
-          <li class="nav-item mt-4"><a class="nav-link text-danger" onclick="logout()">🚪 Logout</a></li>
-        </ul>
+<!-- Modal Pass -->
+<div class="modal fade" id="mdlPass" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Ubah Password</h5></div>
+      <div class="modal-body">
+        <input type="password" id="newPass" class="form-control" placeholder="Password Baru">
       </div>
-
-      <!-- Main Content -->
-      <div class="col-md-10 p-4">
-
-        <!-- Tab 1: Cari Penduduk & Buat Surat -->
-        <div id="tabCari" class="tab-content">
-          <h3>Pencarian Data Penduduk</h3>
-          <div class="input-group mb-3">
-            <input type="text" id="searchKw" class="form-control" placeholder="Ketik NIK atau Nama Penduduk...">
-            <button class="btn btn-primary" onclick="doSearch()">Cari</button>
-          </div>
-          <div id="searchResults" class="table-responsive"></div>
-
-          <!-- Form Pembuatan Surat -->
-          <div id="secBuatSurat" class="mt-4 d-none">
-            <hr>
-            <h4>Buat Surat untuk: <span id="lblNamaPenduduk" class="text-primary"></span></h4>
-            <div class="row mb-3">
-              <div class="col-md-4">
-                <label>Pilih Template Surat</label>
-                <select id="selectTemplate" class="form-select" onchange="previewSelectedTemplate()"></select>
-              </div>
-              <div class="col-md-4">
-                <label>Nomor Surat</label>
-                <input type="text" id="noSurat" class="form-control" value="140/001/Desa/2026">
-              </div>
-              <div class="col-md-4 d-flex align-items-end">
-                <button class="btn btn-success me-2" onclick="saveAndPrint()">Simpan & Cetak HTML</button>
-              </div>
-            </div>
-
-            <div class="card p-3">
-              <h5>Preview & Edit Surat</h5>
-              <div id="printablePaper" class="print-area" contenteditable="true"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Tab 2: Arsip Surat -->
-        <div id="tabArsip" class="tab-content d-none">
-          <h3>Arsip Surat yang Telah Dibuat</h3>
-          <button class="btn btn-sm btn-outline-secondary mb-3" onclick="loadArsip()">Refresh Data</button>
-          <div id="arsipContainer"></div>
-        </div>
-
-        <!-- Tab 3: Kelola Template -->
-        <div id="tabTemplate" class="tab-content d-none">
-          <h3>Kelola Template Surat (Import dari Word)</h3>
-          <div class="card p-3 mb-4">
-            <h5>Tambah / Update Template dari File .docx</h5>
-            <div class="mb-3">
-              <label>Nama Surat</label>
-              <input type="text" id="tplNama" class="form-control" placeholder="Contoh: Surat Keterangan Usaha">
-            </div>
-            <div class="mb-3">
-              <label>Upload File Docx (Word)</label>
-              <input type="file" id="docxFile" class="form-control" accept=".docx">
-            </div>
-            <p class="small text-muted">Variabel yang didukung dari spreadsheet: <code>{NIK}</code>, <code>{Nama_Lengkap}</code>, <code>{Alamat}</code>, <code>{RT}</code>, <code>{RW}</code>, <code>{Pekerjaan}</code>, <code>{Agama}</code>, <code>{Status}</code>, dll.</p>
-            <button class="btn btn-primary" onclick="convertAndSaveDocx()">Import & Simpan Template</button>
-          </div>
-          <div id="templateList"></div>
-        </div>
-
-        <!-- Tab 4: Laporan & Grafik -->
-        <div id="tabLaporan" class="tab-content d-none">
-          <h3>Laporan Surat</h3>
-          <div class="row">
-            <div class="col-md-6">
-              <div class="card p-3">
-                <h5>Jumlah Surat per Bulan</h5>
-                <canvas id="chartBulanan"></canvas>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="card p-3">
-                <h5>Surat Berdasarkan Jenis</h5>
-                <canvas id="chartJenis"></canvas>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Tab 5: Ubah Password -->
-        <div id="tabPass" class="tab-content d-none">
-          <h3>Ubah Password</h3>
-          <div class="card p-3" style="max-width: 400px;">
-            <div class="mb-3">
-              <label>Password Lama</label>
-              <input type="password" id="oldPass" class="form-control">
-            </div>
-            <div class="mb-3">
-              <label>Password Baru</label>
-              <input type="password" id="newPass" class="form-control">
-            </div>
-            <button class="btn btn-primary" onclick="execChangePass()">Update Password</button>
-          </div>
-        </div>
-
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="changePass()">Simpan</button>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-  // PASTE URL WEB APP GOOGLE APPS SCRIPT ANDA DI SINI
-  const API_URL = "https://script.google.com/macros/s/AKfycbx8RaVrSkbbEYuTbo7YmaHC5ASIf3N1El7coIEaJYv2l68uVn0vQCPqtXMTQc-ti2Hz/exec";
+  // ⚠️ GANTI DENGAN URL WEB APP APPS SCRIPT ANDA
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbxqYo7k-Oh_wPoy4d5D7uXGdr-T-spXMCfGyinz2ilyc0nPmdObzJ1pvu_vqcewV2cW/exec";
 
   let currentUser = null;
   let selectedPenduduk = null;
-  let templatesCache = [];
-  let chartB, chartJ;
+  let templates = [];
+  let chartInstance = null;
 
-  // Fungsi helper panggilan API ke Apps Script (CORS Friendly)
-  async function apiCall(action, data = {}) {
-    const response = await fetch(API_URL, {
+  async function apiCall(action, payload = {}) {
+    payload.action = action;
+    const res = await fetch(GAS_URL, {
       method: "POST",
-      mode: "cors",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: action, data: data })
+      body: JSON.stringify(payload)
     });
-    return await response.json();
+    return await res.json();
   }
 
-  // Login Handler
-  document.getElementById('formLogin').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const btn = document.getElementById('btnLogin');
-    btn.disabled = true;
-    btn.innerText = 'Memproses...';
+  async function doLogin() {
+    const username = document.getElementById("loginUser").value;
+    const password = document.getElementById("loginPass").value;
+    const res = await apiCall("login", { username, password });
+    if (res.status === "success") {
+      currentUser = res;
+      document.getElementById("secLogin").classList.add("d-none");
+      document.getElementById("secDashboard").classList.remove("d-none");
+      document.getElementById("userInfo").innerText = `Login: ${res.nama} (${res.role})`;
+      document.getElementById("userInfo").classList.remove("d-none");
+      document.getElementById("btnLogout").classList.remove("d-none");
 
-    const u = document.getElementById('loginUser').value;
-    const p = document.getElementById('loginPass').value;
-    
-    const res = await apiCall('login', { username: u, password: p });
-    btn.disabled = false;
-    btn.innerText = 'Masuk';
-
-    if (res.success) {
-      currentUser = res.user;
-      document.getElementById('loginView').classList.add('d-none');
-      document.getElementById('mainView').classList.remove('d-none');
-      document.getElementById('sessNama').innerText = currentUser.nama;
-      document.getElementById('sessRole').innerText = currentUser.role;
-
-      if (currentUser.role !== 'admin') {
-        document.getElementById('menuTemplate').classList.add('d-none');
-        document.getElementById('menuLaporan').classList.add('d-none');
+      if (res.role === "Penduduk") {
+        document.querySelectorAll(".admin-only").forEach(el => el.classList.add("d-none"));
+      } else {
+        document.querySelectorAll(".admin-only").forEach(el => el.classList.remove("d-none"));
       }
       loadTemplates();
     } else {
-      document.getElementById('loginAlert').innerHTML = `<div class="alert alert-danger">${res.message}</div>`;
+      alert(res.message);
     }
-  });
+  }
 
   function logout() {
     location.reload();
   }
 
-  function switchTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('d-none'));
-    document.querySelectorAll('.sidebar .nav-link').forEach(el => el.classList.remove('active'));
-    document.getElementById(tabId).classList.remove('d-none');
-
-    if (tabId === 'tabArsip') loadArsip();
-    if (tabId === 'tabLaporan') loadLaporan();
+  function switchTab(tab) {
+    document.querySelectorAll(".tab-content").forEach(el => el.classList.add("d-none"));
+    document.querySelectorAll(".btn-group .btn").forEach(el => el.classList.remove("active"));
+    
+    if (tab === 'buatSurat') document.getElementById("tabBuatSurat").classList.remove("d-none");
+    if (tab === 'penduduk') document.getElementById("tabPenduduk").classList.remove("d-none");
+    if (tab === 'template') { document.getElementById("tabTemplate").classList.remove("d-none"); loadTemplates(); }
+    if (tab === 'riwayat') { document.getElementById("tabRiwayat").classList.remove("d-none"); loadRiwayat(); }
+    if (tab === 'laporan') { document.getElementById("tabLaporan").classList.remove("d-none"); loadLaporan(); }
   }
 
-  // Pencarian Penduduk
-  async function doSearch() {
-    const kw = document.getElementById('searchKw').value;
-    const res = await apiCall('searchPenduduk', { keyword: kw });
+  async function cariPenduduk() {
+    const q = document.getElementById("searchKey").value;
+    const res = await apiCall("searchPenduduk", { query: q });
+    const list = document.getElementById("searchResult");
+    list.innerHTML = "";
+    if (res.data.length === 0) { list.innerHTML = "<div class='list-group-item'>Data tidak ditemukan</div>"; return; }
+    res.data.forEach(p => {
+      const item = document.createElement("a");
+      item.className = "list-group-item list-group-item-action";
+      item.innerText = `${p.NIK} - ${p.Nama_Lengkap} (${p.Alamat})`;
+      item.onclick = () => { selectedPenduduk = p; renderSurat(); list.innerHTML = ""; };
+      list.appendChild(item);
+    });
+  }
+
+  async function loadTemplates() {
+    const res = await apiCall("getTemplates");
+    templates = res.data || [];
+    const select = document.getElementById("selectTemplate");
+    select.innerHTML = "<option value=''>-- Pilih Jenis Surat --</option>";
+    const tbody = document.getElementById("listTemplate");
+    tbody.innerHTML = "";
     
-    let html = `<table class="table table-bordered table-striped"><thead><tr>
-      <th>NIK</th><th>Nama</th><th>Sex</th><th>Alamat</th><th>RT/RW</th><th>Aksi</th>
-    </tr></thead><tbody>`;
-    
-    (res.data || []).forEach(p => {
-      html += `<tr>
-        <td>${p.NIK}</td><td>${p.Nama_Lengkap}</td><td>${p.Jenis_Kelamin}</td>
-        <td>${p.Alamat}</td><td>${p.RT}/${p.RW}</td>
-        <td><button class="btn btn-sm btn-primary" onclick='selectPenduduk(${JSON.stringify(p)})'>Pilih & Buat Surat</button></td>
+    templates.forEach(t => {
+      select.innerHTML += `<option value="${t.ID_Template}">${t.Nama_Surat}</option>`;
+      tbody.innerHTML += `<tr>
+        <td>${t.Nama_Surat}</td>
+        <td><button class="btn btn-sm btn-danger" onclick="hapusTemplate('${t.ID_Template}')">Hapus</button></td>
       </tr>`;
     });
-    html += `</tbody></table>`;
-    document.getElementById('searchResults').innerHTML = html;
   }
 
-  function selectPenduduk(p) {
-    selectedPenduduk = p;
-    document.getElementById('lblNamaPenduduk').innerText = `${p.Nama_Lengkap} (${p.NIK})`;
-    document.getElementById('secBuatSurat').classList.remove('d-none');
-    previewSelectedTemplate();
-  }
-
-  // Template Handler
-  async function loadTemplates() {
-    const res = await apiCall('getTemplates');
-    templatesCache = res.data || [];
-    let opt = `<option value="">-- Pilih Surat --</option>`;
-    let list = `<ul class="list-group">`;
-    templatesCache.forEach(t => {
-      opt += `<option value="${t.id}">${t.nama}</option>`;
-      list += `<li class="list-group-item d-flex justify-content-between align-items-center">
-        ${t.nama}
-        <button class="btn btn-sm btn-danger" onclick="deleteTpl('${t.id}')">Hapus</button>
-      </li>`;
-    });
-    list += `</ul>`;
-    document.getElementById('selectTemplate').innerHTML = opt;
-    document.getElementById('templateList').innerHTML = list;
-  }
-
-  function previewSelectedTemplate() {
-    const id = document.getElementById('selectTemplate').value;
-    if (!id || !selectedPenduduk) return;
-    const tpl = templatesCache.find(t => t.id === id);
-    if (!tpl) return;
-
-    let html = tpl.html;
-    Object.keys(selectedPenduduk).forEach(key => {
-      const reg = new RegExp(`{${key}}`, 'g');
-      html = html.replace(reg, selectedPenduduk[key] || '-');
-    });
-    
-    const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-    html = html.replace(/{No_Surat}/g, document.getElementById('noSurat').value);
-    html = html.replace(/{Tanggal_Surat}/g, today);
-
-    document.getElementById('printablePaper').innerHTML = html;
-  }
-
-  function convertAndSaveDocx() {
-    const fileInput = document.getElementById('docxFile');
-    const nama = document.getElementById('tplNama').value;
-    if (!nama || !fileInput.files[0]) {
-      alert("Isi Nama Surat dan pilih file .docx!");
-      return;
-    }
-
+  function convertDocxToHTML() {
+    const file = document.getElementById("docxFile").files[0];
     const reader = new FileReader();
     reader.onload = function(e) {
       mammoth.convertToHtml({ arrayBuffer: e.target.result })
-        .then(async result => {
-          const res = await apiCall('saveTemplate', { id: null, nama: nama, html: result.value });
-          alert(res.message);
-          loadTemplates();
-        });
+        .then(res => { document.getElementById("tmplHTML").value = res.value; });
     };
-    reader.readAsArrayBuffer(fileInput.files[0]);
+    reader.readAsArrayBuffer(file);
   }
 
-  async function deleteTpl(id) {
-    if (confirm("Yakin hapus template ini?")) {
-      const res = await apiCall('deleteTemplate', { id: id });
+  async function simpanTemplate() {
+    const namaSurat = document.getElementById("tmplNama").value;
+    const kontenHTML = document.getElementById("tmplHTML").value;
+    const res = await apiCall("saveTemplate", { namaSurat, kontenHTML });
+    alert(res.message);
+    loadTemplates();
+  }
+
+  async function hapusTemplate(id) {
+    if (confirm("Hapus template ini?")) {
+      const res = await apiCall("deleteTemplate", { id });
       alert(res.message);
       loadTemplates();
     }
   }
 
-  // Simpan dan Cetak Surat
-  async function saveAndPrint() {
-    const content = document.getElementById('printablePaper').innerHTML;
-    const no = document.getElementById('noSurat').value;
-    const sel = document.getElementById('selectTemplate');
-    const namaSurat = sel.options[sel.selectedIndex].text;
+  function renderSurat() {
+    const tmplId = document.getElementById("selectTemplate").value;
+    const area = document.getElementById("areaCetak");
+    if (!tmplId || !selectedPenduduk) return;
 
-    await apiCall('saveSurat', {
-      noSurat: no,
-      namaSurat: namaSurat,
-      nik: selectedPenduduk.NIK,
-      namaPenduduk: selectedPenduduk.Nama_Lengkap,
-      contentHtml: content,
-      pembuat: currentUser.username
+    const tmpl = templates.find(t => String(t.ID_Template) === String(tmplId));
+    if (!tmpl) return;
+
+    let html = tmpl.Konten_HTML;
+    html = html.replace(/{{No_Surat}}/g, document.getElementById("noSurat").value);
+    
+    // Auto replace field penduduk
+    Object.keys(selectedPenduduk).forEach(key => {
+      const regex = new RegExp(`{{${key}}}`, 'g');
+      html = html.replace(regex, selectedPenduduk[key] || '-');
     });
 
+    area.innerHTML = html;
+  }
+
+  async function simpanDanCetak() {
+    const tmplId = document.getElementById("selectTemplate").value;
+    const tmpl = templates.find(t => String(t.ID_Template) === String(tmplId));
+    if (!selectedPenduduk || !tmpl) { alert("Pilih penduduk dan format surat!"); return; }
+
+    const payload = {
+      noSurat: document.getElementById("noSurat").value,
+      nik: selectedPenduduk.NIK,
+      nama: selectedPenduduk.Nama_Lengkap,
+      jenisSurat: tmpl.Nama_Surat,
+      isiSurat: document.getElementById("areaCetak").innerHTML
+    };
+    
+    const res = await apiCall("saveSurat", payload);
+    if(res.status === "success") {
+      window.print();
+    }
+  }
+
+  async function simpanPenduduk() {
+    const fields = ["NIK","Nama_Lengkap","No_KK","Nama_KK","Alamat","RT","RW","Jenis_Kelamin","Tempat_Lahir","Tgl_Lahir","Agama","Pekerjaan","Status","Nama_Ayah","Nama_Ibu"];
+    let penduduk = {};
+    fields.forEach(f => { penduduk[f] = document.getElementById("p_" + f).value; });
+    
+    const res = await apiCall("savePenduduk", { penduduk });
+    alert(res.message);
+  }
+
+  async function loadRiwayat() {
+    const res = await apiCall("getRiwayatSurat", { role: currentUser.role, username: currentUser.username });
+    const tbody = document.getElementById("listRiwayat");
+    tbody.innerHTML = "";
+    (res.data || []).forEach(r => {
+      tbody.innerHTML += `<tr>
+        <td>${r.No_Surat}</td>
+        <td>${r.NIK}</td>
+        <td>${r.Nama_Penduduk}</td>
+        <td>${r.Jenis_Surat}</td>
+        <td>${new Date(r.Tanggal_Buat).toLocaleDateString("id-ID")}</td>
+        <td><button class="btn btn-sm btn-info text-white" onclick="cetakUlang('${encodeURIComponent(r.Isi_Surat)}')">Cetak</button></td>
+      </tr>`;
+    });
+  }
+
+  function cetakUlang(htmlEncoded) {
+    document.getElementById("areaCetak").innerHTML = decodeURIComponent(htmlEncoded);
+    switchTab("buatSurat");
     window.print();
   }
 
-  // Load Arsip Surat
-  async function loadArsip() {
-    const filterNik = currentUser.role === 'admin' ? null : currentUser.username;
-    const res = await apiCall('getArsipSurat', { nikFilter: filterNik });
-    
-    let html = `<table class="table table-bordered"><thead><tr>
-      <th>No. Surat</th><th>Jenis Surat</th><th>NIK</th><th>Nama Penduduk</th><th>Tgl Buat</th><th>Aksi</th>
-    </tr></thead><tbody>`;
-    
-    (res.data || []).forEach(s => {
-      html += `<tr>
-        <td>${s.noSurat}</td><td>${s.namaSurat}</td><td>${s.nik}</td><td>${s.namaPenduduk}</td><td>${s.tanggal}</td>
-        <td><button class="btn btn-sm btn-secondary" onclick="viewArsip('${encodeURIComponent(s.html)}')">Cetak Ulang</button></td>
-      </tr>`;
-    });
-    html += `</tbody></table>`;
-    document.getElementById('arsipContainer').innerHTML = html;
-  }
-
-  function viewArsip(encodedHtml) {
-    const html = decodeURIComponent(encodedHtml);
-    const win = window.open('', '_blank');
-    win.document.write(`<html><head><title>Cetak Surat</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"></head><body>${html}</body></html>`);
-    setTimeout(() => { win.print(); }, 500);
-  }
-
-  // Load Laporan & Grafik
   async function loadLaporan() {
-    const res = await apiCall('getLaporanData');
-    const ctxB = document.getElementById('chartBulanan').getContext('2d');
-    const ctxJ = document.getElementById('chartJenis').getContext('2d');
+    const res = await apiCall("getLaporan");
+    const counts = {};
+    (res.data || []).forEach(r => {
+      counts[r.Jenis_Surat] = (counts[r.Jenis_Surat] || 0) + 1;
+    });
 
-    if (chartB) chartB.destroy();
-    if (chartJ) chartJ.destroy();
+    const labels = Object.keys(counts);
+    const values = Object.values(counts);
 
-    chartB = new Chart(ctxB, {
+    const tbody = document.querySelector("#tblLaporan tbody");
+    tbody.innerHTML = "";
+    labels.forEach(l => {
+      tbody.innerHTML += `<tr><td>${l}</td><td>${counts[l]}</td></tr>`;
+    });
+
+    if (chartInstance) chartInstance.destroy();
+    const ctx = document.getElementById("chartSurat").getContext("2d");
+    chartInstance = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: Object.keys(res.data.bulanan),
-        datasets: [{ label: 'Jumlah Surat', data: Object.values(res.data.bulanan), backgroundColor: '#3b82f6' }]
-      }
-    });
-
-    chartJ = new Chart(ctxJ, {
-      type: 'pie',
-      data: {
-        labels: Object.keys(res.data.jenis),
-        datasets: [{ data: Object.values(res.data.jenis), backgroundColor: ['#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'] }]
+        labels: labels,
+        datasets: [{ label: 'Jumlah Surat Diterbitkan', data: values, backgroundColor: '#0d6efd' }]
       }
     });
   }
 
-  // Ganti Password
-  async function execChangePass() {
-    const oldP = document.getElementById('oldPass').value;
-    const newP = document.getElementById('newPass').value;
-    const res = await apiCall('changePassword', { username: currentUser.username, oldPass: oldP, newPass: newP });
+  function openModalPass() { new bootstrap.Modal(document.getElementById('mdlPass')).show(); }
+  async function changePass() {
+    const newPassword = document.getElementById("newPass").value;
+    const res = await apiCall("changePassword", { username: currentUser.username, newPassword });
     alert(res.message);
-    if (res.success) {
-      document.getElementById('oldPass').value = '';
-      document.getElementById('newPass').value = '';
-    }
   }
 </script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
