@@ -1,1542 +1,658 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplikasi Surat Online Desa</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Chart.js CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Mammoth.js (DOCX to HTML Converter) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
-    <!-- Google Font Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Tinos:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
-        }
-        .font-serif-official {
-            font-family: 'Tinos', 'Times New Roman', Times, serif;
-        }
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
-
-        /* Print Styling Optimization */
-        @media print {
-            body * {
-                visibility: hidden;
-            }
-            #printArea, #printArea * {
-                visibility: visible;
-            }
-            #printArea {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                margin: 0;
-                padding: 15mm;
-                background: white;
-                color: black;
-                font-size: 12pt;
-                line-height: 1.5;
-            }
-            .no-print {
-                display: none !important;
-            }
-            @page {
-                size: A4;
-                margin: 15mm;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aplikasi Pelayanan Surat Online Desa</title>
+  <!-- Tailwind CSS & FontAwesome -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Chart.js untuk Laporan Grafik -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Mammoth.js untuk Import DOCX -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <style>
+    @media print {
+      body * { visibility: hidden; }
+      #printableArea, #printableArea * { visibility: visible; }
+      #printableArea { position: absolute; left: 0; top: 0; width: 100%; }
+      .no-print { display: none !important; }
+    }
+  </style>
 </head>
-<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+<body class="bg-slate-50 font-sans text-slate-800 antialiased">
 
-    <!-- Notification Toast -->
-    <div id="toast" class="fixed top-5 right-5 z-50 transform transition-all duration-300 translate-y-[-100px] opacity-0 flex items-center p-4 mb-4 text-gray-500 bg-white rounded-lg shadow dark:text-gray-400 dark:bg-gray-800 border-l-4 border-emerald-500" role="alert">
-        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-500 text-xl mr-3"></i>
-        <div id="toastMessage" class="text-sm font-medium text-slate-700 dark:text-slate-200">Notifikasi</div>
-    </div>
+  <!-- AUTHENTICATION CONTAINER -->
+  <div id="authContainer" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-indigo-900 via-slate-900 to-slate-950">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 border border-slate-100">
+      <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-100 text-indigo-600 mb-4 shadow-inner">
+          <i class="fa-solid fa-landmark text-2xl"></i>
+        </div>
+        <h1 class="text-2xl font-bold text-slate-900">Surat Online Desa</h1>
+        <p class="text-sm text-slate-500 mt-1">Sistem Layanan Administrasi Kependudukan Terpadu</p>
+      </div>
 
-    <!-- MAIN APP CONTAINER -->
-    <div id="app" class="flex-1 flex flex-col min-h-screen">
-        
-        <!-- LOGIN SCREEN -->
-        <div id="loginScreen" class="flex-1 flex items-center justify-center p-4 bg-slate-900 bg-opacity-95 bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:16px_16px]">
-            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-100">
-                <div class="bg-gradient-to-r from-emerald-600 to-teal-700 p-6 text-center text-white relative">
-                    <div class="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-3 backdrop-blur-sm border border-white/20">
-                        <i class="fa-solid fa-landmark text-3xl text-emerald-100"></i>
-                    </div>
-                    <h2 class="text-2xl font-bold">Layanan Surat Desa</h2>
-                    <p class="text-emerald-100 text-sm mt-1">Sistem Pelayanan Administrasi Digital</p>
-                </div>
-
-                <div class="p-6">
-                    <!-- Tab Switcher -->
-                    <div class="flex rounded-lg bg-slate-100 p-1 mb-6">
-                        <button id="tabBtnAdmin" onclick="switchLoginTab('admin')" class="flex-1 py-2 text-sm font-semibold rounded-md transition-all bg-white text-emerald-700 shadow-sm">
-                            <i class="fa-solid fa-user-shield mr-1.5"></i> Admin / Perangkat
-                        </button>
-                        <button id="tabBtnResident" onclick="switchLoginTab('resident')" class="flex-1 py-2 text-sm font-semibold rounded-md transition-all text-slate-600 hover:text-slate-900">
-                            <i class="fa-solid fa-users mr-1.5"></i> Warga / Penduduk
-                        </button>
-                    </div>
-
-                    <!-- Login Form -->
-                    <form id="loginForm" onsubmit="handleLogin(event)">
-                        <input type="hidden" id="loginType" value="admin">
-                        
-                        <div class="mb-4">
-                            <label id="usernameLabel" class="block text-slate-700 text-sm font-semibold mb-2">Username Admin</label>
-                            <div class="relative">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                                    <i id="usernameIcon" class="fa-solid fa-user"></i>
-                                </div>
-                                <input type="text" id="usernameInput" required placeholder="Masukkan username" class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm transition-all">
-                            </div>
-                        </div>
-
-                        <div class="mb-6">
-                            <label class="block text-slate-700 text-sm font-semibold mb-2">Password</label>
-                            <div class="relative">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                                    <i class="fa-solid fa-lock"></i>
-                                </div>
-                                <input type="password" id="passwordInput" required placeholder="••••••••" class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm transition-all">
-                            </div>
-                        </div>
-
-                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2">
-                            <span>Masuk ke Sistem</span>
-                            <i class="fa-solid fa-arrow-right text-xs"></i>
-                        </button>
-                    </form>
-
-                    <!-- Apps Script Config Modal Link -->
-                    <div class="mt-6 pt-4 border-t border-slate-100 text-center">
-                        <button onclick="openConfigModal()" class="text-xs text-slate-500 hover:text-emerald-600 flex items-center justify-center gap-1.5 mx-auto transition-colors">
-                            <i class="fa-solid fa-sliders text-slate-400"></i>
-                            <span>Pengaturan Database Google Sheets</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
+      <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Username / NIK Penduduk</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400"><i class="fa-solid fa-user"></i></span>
+            <input type="text" id="loginUser" required class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition" placeholder="Masukkan NIK atau Username Admin">
+          </div>
         </div>
 
-        <!-- MAIN DASHBOARD LAYOUT (Hidden initially) -->
-        <div id="dashboardLayout" class="hidden flex-1 flex flex-col md:flex-row min-h-screen">
-            <!-- Sidebar -->
-            <aside class="w-full md:w-64 bg-slate-900 text-slate-300 flex-shrink-0 flex flex-col border-r border-slate-800 no-print">
-                <div class="p-5 border-b border-slate-800 flex items-center justify-between">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 rounded-lg bg-emerald-600 flex items-center justify-center text-white font-bold shadow-md">
-                            <i class="fa-solid fa-landmark text-lg"></i>
-                        </div>
-                        <div>
-                            <h1 class="font-bold text-white text-base leading-snug">SIM-Desa</h1>
-                            <p class="text-xs text-slate-400">Persuratan Digital</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- User Profile Summary -->
-                <div class="p-4 bg-slate-800/50 border-b border-slate-800/80 flex items-center space-x-3">
-                    <div id="userAvatar" class="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-semibold text-sm">
-                        A
-                    </div>
-                    <div class="overflow-hidden">
-                        <p id="userNameDisplay" class="text-sm font-semibold text-white truncate">Administrator</p>
-                        <p id="userRoleDisplay" class="text-xs text-emerald-400 font-medium capitalize">Admin Desa</p>
-                    </div>
-                </div>
-
-                <!-- Navigation Menu -->
-                <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
-                    <!-- Admin Only Menu -->
-                    <div class="admin-only space-y-1">
-                        <div class="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Navigasi Utama</div>
-                        <button onclick="navigateTo('dashHome')" id="nav-dashHome" class="nav-btn w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all bg-emerald-600 text-white">
-                            <i class="fa-solid fa-chart-pie w-5 mr-3 text-center"></i> Dashboard
-                        </button>
-                        <button onclick="navigateTo('createLetter')" id="nav-createLetter" class="nav-btn w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
-                            <i class="fa-solid fa-file-signature w-5 mr-3 text-center"></i> Buat Surat
-                        </button>
-                        <button onclick="navigateTo('population')" id="nav-population" class="nav-btn w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
-                            <i class="fa-solid fa-address-book w-5 mr-3 text-center"></i> Data Penduduk
-                        </button>
-                        <button onclick="navigateTo('templates')" id="nav-templates" class="nav-btn w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
-                            <i class="fa-solid fa-file-code w-5 mr-3 text-center"></i> Format Surat (Word)
-                        </button>
-                        <button onclick="navigateTo('history')" id="nav-history" class="nav-btn w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
-                            <i class="fa-solid fa-clock-rotate-left w-5 mr-3 text-center"></i> Arsip Surat Keluar
-                        </button>
-                        <button onclick="navigateTo('reports')" id="nav-reports" class="nav-btn w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
-                            <i class="fa-solid fa-chart-column w-5 mr-3 text-center"></i> Laporan Grafik
-                        </button>
-                    </div>
-
-                    <!-- Resident Menu -->
-                    <div class="resident-only hidden space-y-1">
-                        <div class="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Layanan Warga</div>
-                        <button onclick="navigateTo('residentProfile')" id="nav-residentProfile" class="nav-btn w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg bg-emerald-600 text-white transition-all">
-                            <i class="fa-solid fa-id-card w-5 mr-3 text-center"></i> Profil Saya
-                        </button>
-                        <button onclick="navigateTo('residentLetterRequest')" id="nav-residentLetterRequest" class="nav-btn w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
-                            <i class="fa-solid fa-file-pen w-5 mr-3 text-center"></i> Cetak Surat Saya
-                        </button>
-                        <button onclick="navigateTo('residentHistory')" id="nav-residentHistory" class="nav-btn w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
-                            <i class="fa-solid fa-folder-open w-5 mr-3 text-center"></i> Riwayat Surat Saya
-                        </button>
-                    </div>
-
-                    <div class="pt-4 mt-4 border-t border-slate-800">
-                        <button onclick="navigateTo('settings')" id="nav-settings" class="nav-btn w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
-                            <i class="fa-solid fa-gear w-5 mr-3 text-center"></i> Pengaturan Akun
-                        </button>
-                        <button onclick="openConfigModal()" class="w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
-                            <i class="fa-solid fa-database w-5 mr-3 text-center"></i> Database Setup
-                        </button>
-                    </div>
-                </nav>
-
-                <div class="p-4 border-t border-slate-800">
-                    <button onclick="handleLogout()" class="w-full bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 border border-rose-500/30 rounded-lg px-3 py-2 text-sm font-medium flex items-center justify-center space-x-2 transition-all">
-                        <i class="fa-solid fa-right-from-bracket"></i>
-                        <span>Keluar Sesi</span>
-                    </button>
-                </div>
-            </aside>
-
-            <!-- Main Content Area -->
-            <main class="flex-1 bg-slate-50 flex flex-col min-w-0 overflow-y-auto">
-                
-                <!-- Top Navbar -->
-                <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between no-print sticky top-0 z-10 shadow-sm">
-                    <div class="flex items-center space-x-3">
-                        <h2 id="pageTitle" class="text-xl font-bold text-slate-800">Dashboard</h2>
-                    </div>
-                    <div class="flex items-center space-x-3">
-                        <span id="bgDbStatus" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5 animate-pulse"></span> Mode Demo Local
-                        </span>
-                        <div class="text-xs text-slate-500 hidden sm:block">
-                            <i class="fa-regular fa-calendar mr-1"></i> <span id="currentDateDisplay"></span>
-                        </div>
-                    </div>
-                </header>
-
-                <!-- Dynamic Views Section -->
-                <div class="p-6 flex-1 space-y-6 max-w-7xl mx-auto w-full">
-                    
-                    <!-- 1. DASHBOARD HOME (Admin) -->
-                    <section id="view-dashHome" class="view-panel space-y-6">
-                        <!-- Stat Cards -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
-                                <div class="w-12 h-12 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xl font-bold">
-                                    <i class="fa-solid fa-users"></i>
-                                </div>
-                                <div>
-                                    <p class="text-xs text-slate-500 font-semibold uppercase">Total Penduduk</p>
-                                    <h3 id="statTotalPenduduk" class="text-2xl font-bold text-slate-800">0</h3>
-                                </div>
-                            </div>
-                            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
-                                <div class="w-12 h-12 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl font-bold">
-                                    <i class="fa-solid fa-file-circle-check"></i>
-                                </div>
-                                <div>
-                                    <p class="text-xs text-slate-500 font-semibold uppercase">Surat Diterbitkan</p>
-                                    <h3 id="statTotalSurat" class="text-2xl font-bold text-slate-800">0</h3>
-                                </div>
-                            </div>
-                            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
-                                <div class="w-12 h-12 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center text-xl font-bold">
-                                    <i class="fa-solid fa-folder-open"></i>
-                                </div>
-                                <div>
-                                    <p class="text-xs text-slate-500 font-semibold uppercase">Format Template</p>
-                                    <h3 id="statTotalTemplates" class="text-2xl font-bold text-slate-800">0</h3>
-                                </div>
-                            </div>
-                            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
-                                <div class="w-12 h-12 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center text-xl font-bold">
-                                    <i class="fa-solid fa-calendar-day"></i>
-                                </div>
-                                <div>
-                                    <p class="text-xs text-slate-500 font-semibold uppercase">Surat Bulan Ini</p>
-                                    <h3 id="statSuratBulanIni" class="text-2xl font-bold text-slate-800">0</h3>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Quick Actions & Recent Letters -->
-                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            <!-- Quick Action Panel -->
-                            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-                                <h3 class="text-base font-bold text-slate-800 border-b border-slate-100 pb-3 flex items-center">
-                                    <i class="fa-solid fa-bolt text-amber-500 mr-2"></i> Akses Cepat Surat
-                                </h3>
-                                <div class="space-y-2.5">
-                                    <button onclick="quickCreateLetter('SKTM')" class="w-full text-left px-4 py-3 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg border border-slate-200 transition-all font-medium text-sm flex justify-between items-center group">
-                                        <span><i class="fa-regular fa-file-lines mr-2 text-slate-400 group-hover:text-emerald-600"></i> Surat Keterangan Tidak Mampu (SKTM)</span>
-                                        <i class="fa-solid fa-chevron-right text-xs opacity-50"></i>
-                                    </button>
-                                    <button onclick="quickCreateLetter('SKU')" class="w-full text-left px-4 py-3 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg border border-slate-200 transition-all font-medium text-sm flex justify-between items-center group">
-                                        <span><i class="fa-regular fa-file-lines mr-2 text-slate-400 group-hover:text-emerald-600"></i> Surat Keterangan Usaha (SKU)</span>
-                                        <i class="fa-solid fa-chevron-right text-xs opacity-50"></i>
-                                    </button>
-                                    <button onclick="quickCreateLetter('SKD')" class="w-full text-left px-4 py-3 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg border border-slate-200 transition-all font-medium text-sm flex justify-between items-center group">
-                                        <span><i class="fa-regular fa-file-lines mr-2 text-slate-400 group-hover:text-emerald-600"></i> Surat Keterangan Domisili</span>
-                                        <i class="fa-solid fa-chevron-right text-xs opacity-50"></i>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Recent History Preview -->
-                            <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                                <div class="flex justify-between items-center mb-4">
-                                    <h3 class="text-base font-bold text-slate-800">Aktivitas Surat Terakhir</h3>
-                                    <button onclick="navigateTo('history')" class="text-xs font-semibold text-emerald-600 hover:underline">Lihat Semua</button>
-                                </div>
-                                <div class="overflow-x-auto">
-                                    <table class="w-full text-left text-sm text-slate-600">
-                                        <thead class="text-xs text-slate-400 uppercase bg-slate-50 border-y border-slate-100">
-                                            <tr>
-                                                <th class="py-2.5 px-3">No Surat</th>
-                                                <th class="py-2.5 px-3">Nama Warga</th>
-                                                <th class="py-2.5 px-3">Jenis Surat</th>
-                                                <th class="py-2.5 px-3">Tanggal</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="recentHistoryTable" class="divide-y divide-slate-100">
-                                            <!-- Dynamic Rows -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- 2. PEMBUATAN SURAT (Create Letter Page) -->
-                    <section id="view-createLetter" class="view-panel hidden space-y-6">
-                        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
-                            
-                            <!-- Search Resident Header -->
-                            <div class="bg-gradient-to-r from-emerald-600 to-teal-700 p-6 rounded-xl text-white shadow-md">
-                                <h3 class="font-bold text-lg mb-1"><i class="fa-solid fa-magnifying-glass mr-2"></i> Langkah 1: Cari Data Penduduk</h3>
-                                <p class="text-xs text-emerald-100 mb-4">Ketik NIK atau Nama Penduduk untuk mengisi variabel surat secara otomatis.</p>
-                                
-                                <div class="relative max-w-2xl">
-                                    <input type="text" id="letterSearchInput" oninput="handleResidentSearch(this.value)" placeholder="Ketik NIK atau Nama Lengkap Penduduk..." class="w-full pl-11 pr-4 py-3 rounded-lg text-slate-800 text-sm focus:outline-none focus:ring-4 focus:ring-emerald-300 shadow-sm">
-                                    <i class="fa-solid fa-search absolute left-4 top-3.5 text-slate-400"></i>
-                                    
-                                    <!-- Search Auto-complete Dropdown -->
-                                    <div id="searchResultDropdown" class="hidden absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-xl border border-slate-200 z-30 max-h-60 overflow-y-auto divide-y divide-slate-100">
-                                        <!-- Dynamic Results -->
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Selected Resident Summary Card -->
-                            <div id="selectedResidentCard" class="hidden bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
-                                <div class="flex items-center space-x-4">
-                                    <div class="w-12 h-12 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-lg">
-                                        <i class="fa-solid fa-user-check"></i>
-                                    </div>
-                                    <div>
-                                        <h4 id="selectedNama" class="font-bold text-slate-900 text-base">Nama Terpilih</h4>
-                                        <p class="text-xs text-slate-600">NIK: <span id="selectedNik" class="font-semibold text-slate-800"></span> | KK: <span id="selectedKk"></span></p>
-                                        <p class="text-xs text-slate-500 mt-0.5">Alamat: <span id="selectedAlamat"></span> RT <span id="selectedRt"></span> / RW <span id="selectedRw"></span></p>
-                                    </div>
-                                </div>
-                                <button onclick="clearSelectedResident()" class="px-3 py-1.5 text-xs font-semibold text-rose-600 bg-white border border-rose-200 hover:bg-rose-50 rounded-lg transition-all">
-                                    <i class="fa-solid fa-rotate-left mr-1"></i> Ganti Warga
-                                </button>
-                            </div>
-
-                            <!-- Form Config Surat -->
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                                <div>
-                                    <label class="block text-slate-700 text-sm font-semibold mb-2">Pilih Format / Jenis Surat</label>
-                                    <select id="letterTemplateSelect" onchange="previewSelectedTemplate()" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm">
-                                        <!-- Options populated dynamically -->
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label class="block text-slate-700 text-sm font-semibold mb-2">Nomor Surat Official</label>
-                                    <input type="text" id="letterNoInput" value="470/021/DS-2026" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm">
-                                </div>
-                            </div>
-
-                            <!-- Additional Custom Variables / Inputs -->
-                            <div class="border-t border-slate-100 pt-4">
-                                <label class="block text-slate-700 text-sm font-semibold mb-2">Keperluan / Keterangan Tambahan (Opsional)</label>
-                                <textarea id="letterKeperluanInput" rows="2" placeholder="Contoh: Persyaratan Pengurusan Beasiswa Pendidikan / Permohonan Pinjaman Bank" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"></textarea>
-                            </div>
-
-                            <!-- Action Buttons -->
-                            <div class="flex items-center justify-end space-x-3 pt-4 border-t border-slate-100">
-                                <button onclick="generateLetterPreview()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg shadow transition-all flex items-center space-x-2 text-sm">
-                                    <i class="fa-solid fa-eye"></i>
-                                    <span>Pratinjau & Cetak Surat</span>
-                                </button>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- 3. DATA PENDUDUK (28 Fields Database) -->
-                    <section id="view-population" class="view-panel hidden space-y-6">
-                        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-                            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                                <div>
-                                    <h3 class="text-lg font-bold text-slate-800">Master Data Penduduk Desa</h3>
-                                    <p class="text-xs text-slate-500">Kelola 28 atribut kependudukan warga desa.</p>
-                                </div>
-                                <button onclick="openResidentModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg shadow transition-all flex items-center space-x-2">
-                                    <i class="fa-solid fa-user-plus"></i>
-                                    <span>Tambah Penduduk</span>
-                                </button>
-                            </div>
-
-                            <!-- Filter Search -->
-                            <div class="flex items-center space-x-3">
-                                <div class="relative flex-1">
-                                    <input type="text" id="popTableSearch" oninput="renderPopulationTable()" placeholder="Cari NIK, Nama, atau No KK..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500">
-                                    <i class="fa-solid fa-search absolute left-3.5 top-3 text-slate-400 text-xs"></i>
-                                </div>
-                            </div>
-
-                            <!-- Population Table -->
-                            <div class="overflow-x-auto border border-slate-200 rounded-lg">
-                                <table class="w-full text-left text-xs text-slate-700">
-                                    <thead class="bg-slate-100 font-semibold text-slate-600 border-b border-slate-200">
-                                        <tr>
-                                            <th class="py-3 px-3">No KK</th>
-                                            <th class="py-3 px-3">NIK</th>
-                                            <th class="py-3 px-3">Nama Lengkap</th>
-                                            <th class="py-3 px-3">JK</th>
-                                            <th class="py-3 px-3">TTL</th>
-                                            <th class="py-3 px-3">Agama</th>
-                                            <th class="py-3 px-3">Pekerjaan</th>
-                                            <th class="py-3 px-3 text-center">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="populationTableBody" class="divide-y divide-slate-100">
-                                        <!-- Dynamic Rows -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- 4. FORMAT SURAT & IMPORT DOCX -->
-                    <section id="view-templates" class="view-panel hidden space-y-6">
-                        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
-                            <div class="flex justify-between items-center border-b border-slate-100 pb-4">
-                                <div>
-                                    <h3 class="text-lg font-bold text-slate-800">Kelola Format Surat (Import Word)</h3>
-                                    <p class="text-xs text-slate-500">Impor template file `.docx` dari Microsoft Word atau buat format HTML baru.</p>
-                                </div>
-                                <button onclick="openTemplateEditorModal()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-all">
-                                    <i class="fa-solid fa-plus mr-1"></i> Buat Format Baru
-                                </button>
-                            </div>
-
-                            <!-- Upload DOCX Importer Card -->
-                            <div class="border-2 border-dashed border-emerald-300 bg-emerald-50/50 p-6 rounded-xl text-center">
-                                <i class="fa-solid fa-file-word text-4xl text-emerald-600 mb-2"></i>
-                                <h4 class="font-bold text-slate-800 text-sm">Upload Template Word (.docx)</h4>
-                                <p class="text-xs text-slate-500 mb-4 max-w-md mx-auto">Sistem akan secara otomatis membaca format dokumen Word Anda dan menyalinnya sama persis ke dalam format template aplikasi.</p>
-                                
-                                <label class="cursor-pointer inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow transition-all">
-                                    <i class="fa-solid fa-file-import mr-2"></i> Pilih File DOCX
-                                    <input type="file" id="docxFileInput" accept=".docx" onchange="handleDocxImport(event)" class="hidden">
-                                </label>
-                            </div>
-
-                            <!-- List Template Table -->
-                            <div class="overflow-x-auto border border-slate-200 rounded-lg">
-                                <table class="w-full text-left text-sm text-slate-700">
-                                    <thead class="bg-slate-50 font-semibold text-slate-600 border-b border-slate-200 text-xs">
-                                        <tr>
-                                            <th class="py-3 px-4">Kode / ID</th>
-                                            <th class="py-3 px-4">Nama Format Surat</th>
-                                            <th class="py-3 px-4">Kategori / Kode Surat</th>
-                                            <th class="py-3 px-4 text-center">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="templateTableBody" class="divide-y divide-slate-100">
-                                        <!-- Dynamic Templates List -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- 5. HISTORI ARSIP SURAT KELUAR -->
-                    <section id="view-history" class="view-panel hidden space-y-6">
-                        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-                            <div class="flex justify-between items-center border-b border-slate-100 pb-4">
-                                <div>
-                                    <h3 class="text-lg font-bold text-slate-800">Arsip Surat Keluar</h3>
-                                    <p class="text-xs text-slate-500">Daftar riwayat seluruh surat yang telah diterbitkan desa.</p>
-                                </div>
-                            </div>
-
-                            <div class="overflow-x-auto border border-slate-200 rounded-lg">
-                                <table class="w-full text-left text-xs text-slate-700">
-                                    <thead class="bg-slate-100 font-semibold text-slate-600 border-b border-slate-200">
-                                        <tr>
-                                            <th class="py-3 px-3">No. Surat</th>
-                                            <th class="py-3 px-3">NIK</th>
-                                            <th class="py-3 px-3">Nama Pemohon</th>
-                                            <th class="py-3 px-3">Jenis Surat</th>
-                                            <th class="py-3 px-3">Tanggal Terbit</th>
-                                            <th class="py-3 px-3 text-center">Cetak Ulang</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="historyTableBody" class="divide-y divide-slate-100">
-                                        <!-- Dynamic History Rows -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- 6. LAPORAN & GRAFIK (Analytics) -->
-                    <section id="view-reports" class="view-panel hidden space-y-6">
-                        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
-                            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-4">
-                                <div>
-                                    <h3 class="text-lg font-bold text-slate-800">Laporan Statistik Persuratan</h3>
-                                    <p class="text-xs text-slate-500">Laporan bulanan dan tahunan rekapitulasi penerbitan surat desa.</p>
-                                </div>
-                                <div class="flex items-center space-x-2">
-                                    <select id="reportYearSelect" onchange="renderReports()" class="px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-medium">
-                                        <option value="2026">Tahun 2026</option>
-                                        <option value="2025">Tahun 2025</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <!-- Charts Grid -->
-                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                                    <h4 class="text-xs font-bold text-slate-700 uppercase mb-3">Tren Penerbitan Surat Bulanan</h4>
-                                    <div class="h-64">
-                                        <canvas id="monthlyChart"></canvas>
-                                    </div>
-                                </div>
-                                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                                    <h4 class="text-xs font-bold text-slate-700 uppercase mb-3">Distribusi Jenis Surat Diterbitkan</h4>
-                                    <div class="h-64 flex justify-center">
-                                        <canvas id="letterTypeChart"></canvas>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Summary Table -->
-                            <div class="border border-slate-200 rounded-lg overflow-hidden">
-                                <table class="w-full text-left text-xs text-slate-700">
-                                    <thead class="bg-slate-100 font-semibold text-slate-600 border-b border-slate-200">
-                                        <tr>
-                                            <th class="py-3 px-4">Bulan</th>
-                                            <th class="py-3 px-4">SKTM</th>
-                                            <th class="py-3 px-4">SKU</th>
-                                            <th class="py-3 px-4">Domisili</th>
-                                            <th class="py-3 px-4">Total Surat</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="reportSummaryTable" class="divide-y divide-slate-100">
-                                        <!-- Dynamic Summary Rows -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- 7. RESIDENT SPECIFIC VIEWS -->
-                    <section id="view-residentProfile" class="view-panel hidden space-y-6">
-                        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-                            <h3 class="text-lg font-bold text-slate-800 border-b border-slate-100 pb-3">Profil Data Kependudukan Saya</h3>
-                            <div id="residentProfileDetails" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                                <!-- Rendered dynamically -->
-                            </div>
-                        </div>
-                    </section>
-
-                    <section id="view-residentLetterRequest" class="view-panel hidden space-y-6">
-                        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-                            <h3 class="text-lg font-bold text-slate-800">Cetak Surat Keterangan Warga</h3>
-                            <p class="text-xs text-slate-500">Pilih jenis surat yang Anda butuhkan untuk langsung mencetak berkas secara mandiri.</p>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                                <div>
-                                    <label class="block text-slate-700 text-xs font-semibold mb-1">Pilih Jenis Surat</label>
-                                    <select id="resLetterSelect" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs">
-                                        <!-- Dynamic -->
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-slate-700 text-xs font-semibold mb-1">Keperluan Surat</label>
-                                    <input type="text" id="resKeperluan" placeholder="Misal: Persyaratan Bantuan Sosial" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs">
-                                </div>
-                            </div>
-                            <button onclick="residentGenerateLetter()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow">
-                                <i class="fa-solid fa-print mr-1"></i> Cetak Pratinjau Surat
-                            </button>
-                        </div>
-                    </section>
-
-                    <section id="view-residentHistory" class="view-panel hidden space-y-6">
-                        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-                            <h3 class="text-lg font-bold text-slate-800">Riwayat Surat Saya</h3>
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-left text-xs text-slate-700 border border-slate-200 rounded-lg">
-                                    <thead class="bg-slate-50 font-semibold border-b border-slate-200">
-                                        <tr>
-                                            <th class="py-3 px-3">No Surat</th>
-                                            <th class="py-3 px-3">Jenis Surat</th>
-                                            <th class="py-3 px-3">Tanggal</th>
-                                            <th class="py-3 px-3 text-center">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="residentHistoryBody" class="divide-y divide-slate-100">
-                                        <!-- Dynamic -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- 8. SETTINGS VIEW -->
-                    <section id="view-settings" class="view-panel hidden space-y-6">
-                        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm max-w-lg space-y-4">
-                            <h3 class="text-lg font-bold text-slate-800 border-b border-slate-100 pb-3">Pengaturan Akun & Password</h3>
-                            <form onsubmit="handleChangePassword(event)" class="space-y-4">
-                                <div>
-                                    <label class="block text-slate-700 text-xs font-semibold mb-1">Password Baru</label>
-                                    <input type="password" id="newPassInput" required placeholder="••••••••" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs">
-                                </div>
-                                <div>
-                                    <label class="block text-slate-700 text-xs font-semibold mb-1">Konfirmasi Password Baru</label>
-                                    <input type="password" id="confirmPassInput" required placeholder="••••••••" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs">
-                                </div>
-                                <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow">
-                                    Simpan Perubahan Password
-                                </button>
-                            </form>
-                        </div>
-                    </section>
-
-                </div>
-            </main>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Password</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400"><i class="fa-solid fa-lock"></i></span>
+            <input type="password" id="loginPass" required class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition" placeholder="••••••••">
+          </div>
         </div>
+
+        <button type="submit" id="btnLogin" class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-lg shadow-indigo-500/30 transition duration-200 flex items-center justify-center gap-2">
+          <span>Masuk Sistem</span>
+          <i class="fa-solid fa-arrow-right-to-bracket"></i>
+        </button>
+      </form>
+
+      <div class="mt-6 text-center text-xs text-slate-400">
+        Penduduk: Masukkan NIK & Password default (123456 / Tgl Lahir YYYYMMDD)
+      </div>
     </div>
+  </div>
 
-    <!-- MODAL: PREVIEW & PRINT SURAT -->
-    <div id="printPreviewModal" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div class="bg-slate-800 px-6 py-4 text-white flex justify-between items-center no-print">
-                <h3 class="font-bold text-sm"><i class="fa-solid fa-file-pdf text-emerald-400 mr-2"></i> Pratinjau Cetak Surat Resmi Desa</h3>
-                <div class="flex items-center space-x-2">
-                    <button onclick="triggerPrint()" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition-all flex items-center space-x-1">
-                        <i class="fa-solid fa-print"></i> <span>Cetak Sekarang</span>
-                    </button>
-                    <button onclick="closePrintModal()" class="text-slate-400 hover:text-white px-2 py-1 text-lg">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-            </div>
-            
-            <div class="p-8 overflow-y-auto flex-1 bg-slate-100 flex justify-center">
-                <!-- PRINT CONTAINER WITH OFFICIAL KOP SURAT -->
-                <div id="printArea" class="bg-white p-10 shadow-md border border-slate-200 rounded text-slate-900 font-serif-official w-full max-w-[21cm] min-h-[29.7cm] flex flex-col justify-between">
-                    <div>
-                        <!-- Kop Surat -->
-                        <div class="border-b-4 border-double border-slate-900 pb-3 mb-6 text-center relative">
-                            <div class="uppercase tracking-wide text-center">
-                                <h4 class="text-base font-bold leading-tight">PEMERINTAH KABUPATEN DESA DIGITAL</h4>
-                                <h4 class="text-base font-bold leading-tight">KECAMATAN LAYANAN PUBLIK</h4>
-                                <h3 class="text-xl font-bold leading-tight">PEMERINTAH DESA SUKAMAJU</h3>
-                                <p class="text-xs font-sans italic mt-1">Jl. Raya Desa Sukamaju No. 01 Kode Pos 40123 Email: desa.sukamaju@go.id</p>
-                            </div>
-                        </div>
-
-                        <!-- Content Surat Dynamic -->
-                        <div id="letterDynamicBody">
-                            <!-- Dynamic preview generated here -->
-                        </div>
-                    </div>
-
-                    <!-- Tanda Tangan Kepala Desa -->
-                    <div class="mt-12 flex justify-end">
-                        <div class="text-center w-64 text-sm font-sans">
-                            <p>Sukamaju, <span id="letterDatePrint">28 Oktober 2026</span></p>
-                            <p class="font-semibold mb-16">Kepala Desa Sukamaju</p>
-                            <p class="font-bold underline text-base">H. AHMAD SUBAKTI, S.IP</p>
-                            <p class="text-xs text-slate-500">NIP. 19780512 200501 1 003</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+  <!-- MAIN APP CONTAINER (Hidden by default) -->
+  <div id="appContainer" class="hidden min-h-screen flex flex-col">
+    <!-- Navbar -->
+    <header class="bg-indigo-900 text-white shadow-md sticky top-0 z-50">
+      <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center">
+            <i class="fa-solid fa-landmark text-indigo-300 text-lg"></i>
+          </div>
+          <div>
+            <h2 class="font-bold text-base leading-tight">PEMERINTAH DESA</h2>
+            <p class="text-xs text-indigo-300">Layanan Surat Mandiri & Administrasi</p>
+          </div>
         </div>
-    </div>
-
-    <!-- MODAL: CONFIG GOOGLE SHEETS & CODE.GS -->
-    <div id="configModal" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div class="bg-slate-900 px-6 py-4 text-white flex justify-between items-center">
-                <h3 class="font-bold text-sm"><i class="fa-solid fa-database text-emerald-400 mr-2"></i> Integrasi Google Sheets Database</h3>
-                <button onclick="closeConfigModal()" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <div class="p-6 space-y-4 overflow-y-auto text-xs text-slate-700">
-                <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-lg">
-                    <p class="font-bold text-emerald-800 text-sm mb-1">Panduan Menghubungkan Google Sheets:</p>
-                    <ol class="list-decimal list-inside space-y-1 text-emerald-700">
-                        <li>Buat Spreadsheet baru di Google Drive dengan tab: <code class="bg-white px-1 py-0.5 rounded border">PENDUDUK</code>, <code class="bg-white px-1 py-0.5 rounded border">USERS</code>, <code class="bg-white px-1 py-0.5 rounded border">SURAT_KELUAR</code>, dan <code class="bg-white px-1 py-0.5 rounded border">TEMPLATES_SURAT</code>.</li>
-                        <li>Buka <b>Extensions > Apps Script</b> pada Google Sheets Anda.</li>
-                        <li>Salin kode Google Apps Script di bawah ini dan Publish sebagai <b>Web App</b> (Access: <i>Anyone</i>).</li>
-                        <li>Tempelkan Web App URL hasil Deploy pada kolom di bawah.</li>
-                    </ol>
-                </div>
-
-                <div>
-                    <label class="block font-bold mb-1">Google Apps Script Web App URL</label>
-                    <input type="text" id="webAppUrlInput" placeholder="https://script.google.com/macros/s/AKfycb.../exec" class="w-full px-3 py-2 border border-slate-300 rounded-lg">
-                </div>
-
-                <div>
-                    <label class="block font-bold mb-1">Kode Google Apps Script Backend (Code.gs)</label>
-                    <textarea readonly rows="8" class="w-full p-3 font-mono text-[11px] bg-slate-900 text-emerald-400 rounded-lg select-all">
-// KODE GOOGLE APPS SCRIPT (Code.gs)
-function doGet(e) {
-  var action = e.parameter.action;
-  var sheet = SpreadsheetApp.getActiveSpreadsheet();
-  
-  if (action == "getPenduduk") {
-    var data = sheet.getSheetByName("PENDUDUK").getDataRange().getValues();
-    return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
-  }
-  return ContentService.createTextOutput("API SIM-Desa Aktif");
-}
-
-function doPost(e) {
-  var data = JSON.parse(e.postData.contents);
-  var sheet = SpreadsheetApp.getActiveSpreadsheet();
-  
-  if (data.action == "saveSurat") {
-    sheet.getSheetByName("SURAT_KELUAR").appendRow([
-      data.noSurat, data.nik, data.nama, data.jenisSurat, new Date().toISOString(), data.content
-    ]);
-    return ContentService.createTextOutput(JSON.stringify({status: "success"})).setMimeType(ContentService.MimeType.JSON);
-  }
-}
-                    </textarea>
-                </div>
-            </div>
-            <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end space-x-2">
-                <button onclick="saveConfigUrl()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700">Simpan Web App URL</button>
-            </div>
+        <div class="flex items-center gap-4">
+          <div class="text-right hidden sm:block">
+            <p id="navUserName" class="text-sm font-semibold">Nama User</p>
+            <p id="navUserRole" class="text-xs text-indigo-300 uppercase">Role</p>
+          </div>
+          <button onclick="openModalGantiPass()" class="p-2 bg-indigo-800 hover:bg-indigo-700 rounded-lg text-sm transition" title="Ganti Password">
+            <i class="fa-solid fa-key"></i>
+          </button>
+          <button onclick="handleLogout()" class="p-2 bg-red-600/80 hover:bg-red-600 rounded-lg text-sm transition" title="Keluar">
+            <i class="fa-solid fa-power-off"></i>
+          </button>
         </div>
-    </div>
+      </div>
+    </header>
 
-    <!-- MODAL: ADD/EDIT RESIDENT (28 FIELDS) -->
-    <div id="residentModal" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div class="bg-slate-900 px-6 py-4 text-white flex justify-between items-center">
-                <h3 id="resModalTitle" class="font-bold text-sm">Form Data Penduduk (28 Field Database)</h3>
-                <button onclick="closeResidentModal()" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <form id="residentForm" onsubmit="handleSaveResident(event)" class="p-6 overflow-y-auto flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                <!-- 28 Dynamic Fields Grid -->
-                <div><label class="block font-semibold mb-1">1. No. KK</label><input type="text" id="f_nokk" required class="w-full p-2 border rounded"></div>
-                <div><label class="block font-semibold mb-1">2. Nama KK</label><input type="text" id="f_namakk" required class="w-full p-2 border rounded"></div>
-                <div><label class="block font-semibold mb-1">3. Alamat</label><input type="text" id="f_alamat" required class="w-full p-2 border rounded"></div>
-                <div><label class="block font-semibold mb-1">4. RT</label><input type="text" id="f_rt" required class="w-full p-2 border rounded"></div>
-                <div><label class="block font-semibold mb-1">5. RW</label><input type="text" id="f_rw" required class="w-full p-2 border rounded"></div>
-                <div><label class="block font-semibold mb-1">6. NIK</label><input type="text" id="f_nik" required class="w-full p-2 border rounded"></div>
-                <div><label class="block font-semibold mb-1">7. Nama Lengkap</label><input type="text" id="f_nama" required class="w-full p-2 border rounded"></div>
-                <div><label class="block font-semibold mb-1">8. Jenis Kelamin</label>
-                    <select id="f_jk" class="w-full p-2 border rounded"><option>LAKI-LAKI</option><option>PEREMPUAN</option></select>
-                </div>
-                <div><label class="block font-semibold mb-1">9. Tempat Lahir</label><input type="text" id="f_tempatlahir" required class="w-full p-2 border rounded"></div>
-                <div><label class="block font-semibold mb-1">10. Tgl. Lahir</label><input type="date" id="f_tgllahir" required class="w-full p-2 border rounded"></div>
-                <div><label class="block font-semibold mb-1">11. Akta Lahir</label><input type="text" id="f_aktalahir" class="w-full p-2 border rounded"></div>
-                <div><label class="block font-semibold mb-1">12. Gol. Darah</label><input type="text" id="f_goldarah" placeholder="A/B/AB/O" class="w-full p-2 border rounded"></div>
-                <div><label class="block font-semibold mb-1">13. Agama</label><input type="text" id="f_agama" value="ISLAM" class="w-full p-2 border rounded"></div>
-                <div><label class="block font-semibold mb-1">14. Status Perkawinan</label><input type="text" id="f_status" value="KAWIN" class="w-full p-2 border rounded"></div>
-                <div><label class="block font-semibold mb-1">15. Akta Nikah</label><input type="text" id="f_aktanikah" class="w-full p-2 border rounded"></div>
-                <div><label class="block font-semibold mb-1">16. Tgl. Perkawinan</label><input type="date" id="f_tglkawin" class="w-full p-2 border rounded"></div>
-                <div><label class="block font-semibold mb-1">17. Akta Cerai</label><input type="text" id="f_aktacerai" class="w-full p-2 border rounded"></div>
-                <div><label class="block font-semibold mb-1">18. Tgl. Perceraian</label><input type="date" id="f_tglcerai" class="w-full p-2 border rounded"></div>
-                <div><label class="block font-semibold mb-1">19. SHBKEL</label><input type="text" id="f_shbkel" value="KEPALA KELUARGA" class="w-full p-2 border rounded"></div>
-                <div><label class="block font-semibold mb-1">20. Kelainan Fisik</label><input type="text" id="f_kelainan" value="TIDAK ADA" class="w-full p-2 border rounded"></div>
-                <div><label class="block font-semibold mb-1">21. Disabilitas</label><input type="text" id="f_disabilitas" value="TIDAK ADA" class="w-full p-2 border rounded"></div>
-                <div><label class="block font-semibold mb-1">22. Pendidikan</label><input type="text" id="f_pendidikan" value="SMA / SEDERAJAT" class="w-full p-2 border rounded"></div>
-                <div><label class="block font-semibold mb-1">23. Pekerjaan</label><input type="text" id="f_pekerjaan" value="WIRASWASTA" class="w-full p-2 border rounded"></div>
-                <div><label class="block font-semibold mb-1">24. NIK Ibu</label><input type="text" id="f_nikibu" class="w-full p-2 border rounded"></div>
-                <div><label class="block font-semibold mb-1">25. Nama Ibu</label><input type="text" id="f_namaibu" class="w-full p-2 border rounded"></div>
-                <div><label class="block font-semibold mb-1">26. NIK Ayah</label><input type="text" id="f_nikayah" class="w-full p-2 border rounded"></div>
-                <div><label class="block font-semibold mb-1">27. Nama Ayah</label><input type="text" id="f_namaayah" class="w-full p-2 border rounded"></div>
-                <div><label class="block font-semibold mb-1">28. Mutasi Status</label><input type="text" id="f_mutasi" value="TETAP" class="w-full p-2 border rounded"></div>
+    <!-- Navigation Tabs -->
+    <nav class="bg-white border-b border-slate-200 shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 flex overflow-x-auto space-x-2 py-2">
+        <button onclick="switchTab('tabPenduduk')" id="btnTabPenduduk" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-indigo-600 bg-indigo-50 transition flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-users"></i> Data Penduduk
+        </button>
+        <button onclick="switchTab('tabBuatSurat')" id="btnTabBuatSurat" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100 transition flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-file-pen"></i> Buat Surat Online
+        </button>
+        <button onclick="switchTab('tabTemplate')" id="btnTabTemplate" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100 transition flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-file-word"></i> Kelola Template Surat
+        </button>
+        <button onclick="switchTab('tabArsip')" id="btnTabArsip" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100 transition flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-box-archive"></i> Arsip Surat Keluar
+        </button>
+        <button onclick="switchTab('tabLaporan')" id="btnTabLaporan" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100 transition flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-chart-pie"></i> Laporan & Grafik
+        </button>
+      </div>
+    </nav>
 
-                <div class="md:col-span-3 pt-4 border-t border-slate-200 flex justify-end space-x-2">
-                    <button type="button" onclick="closeResidentModal()" class="px-4 py-2 border border-slate-300 rounded text-xs">Batal</button>
-                    <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded text-xs font-semibold hover:bg-emerald-700">Simpan Data Penduduk</button>
-                </div>
-            </form>
+    <!-- Content Sections -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
+      
+      <!-- 1. TAB PENDUDUK -->
+      <section id="tabPenduduk" class="tab-content space-y-6">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">Database Penduduk (28 Field)</h3>
+            <p class="text-xs text-slate-500">Pencarian cepat berdasarkan NIK, Nama Lengkap, atau Nomor KK.</p>
+          </div>
+          <div class="flex gap-2 w-full sm:w-auto">
+            <input type="text" id="searchPendudukInput" onkeyup="filterPenduduk()" placeholder="Ketik NIK / Nama..." class="px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm w-full sm:w-64 focus:bg-white outline-none">
+            <button onclick="openModalPenduduk()" id="btnTambahPdk" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold shadow transition whitespace-nowrap">
+              <i class="fa-solid fa-user-plus mr-1"></i> Tambah
+            </button>
+          </div>
         </div>
-    </div>
 
-    <!-- MODAL: TEMPLATE EDITOR -->
-    <div id="templateEditorModal" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div class="bg-slate-900 px-6 py-4 text-white flex justify-between items-center">
-                <h3 class="font-bold text-sm">Editor Template Surat Desa</h3>
-                <button onclick="closeTemplateEditorModal()" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <form onsubmit="handleSaveTemplate(event)" class="p-6 overflow-y-auto flex-1 space-y-4 text-xs">
-                <input type="hidden" id="tplIdInput">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block font-semibold mb-1">Nama Format Surat</label>
-                        <input type="text" id="tplNameInput" required placeholder="Contoh: Surat Keterangan Usaha" class="w-full p-2 border rounded">
-                    </div>
-                    <div>
-                        <label class="block font-semibold mb-1">Kode Surat</label>
-                        <input type="text" id="tplCodeInput" required placeholder="SKU" class="w-full p-2 border rounded">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block font-semibold mb-1">Isi Template Surat (HTML dengan Variable Tag)</label>
-                    <p class="text-[11px] text-slate-500 mb-2">Gunakan Tag: <code class="text-emerald-600 font-bold">{{NAMA}}</code>, <code class="text-emerald-600 font-bold">{{NIK}}</code>, <code class="text-emerald-600 font-bold">{{NO_KK}}</code>, <code class="text-emerald-600 font-bold">{{ALAMAT}}</code>, <code class="text-emerald-600 font-bold">{{NO_SURAT}}</code>, <code class="text-emerald-600 font-bold">{{KEPERLUAN}}</code></p>
-                    <textarea id="tplContentInput" rows="12" required class="w-full p-3 font-mono text-xs border rounded focus:ring-2 focus:ring-emerald-500"></textarea>
-                </div>
-
-                <div class="flex justify-end space-x-2 pt-2 border-t border-slate-100">
-                    <button type="button" onclick="closeTemplateEditorModal()" class="px-4 py-2 border rounded">Batal</button>
-                    <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded font-semibold hover:bg-emerald-700">Simpan Template</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-
-    <!-- JAVASCRIPT APP APPLICATION LOGIC -->
-    <script>
-        // --- APP STATE ---
-        let currentUser = null;
-        let selectedResidentForLetter = null;
-        let webAppUrl = localStorage.getItem('simdesa_webapp_url') || '';
-
-        // Default Mock Data Database Penduduk (28 Fields)
-        let populationData = [
-            {
-                nokk: "3273012304100001", namakk: "BUDI SANTOSO", alamat: "Jl. Mawar No. 12", rt: "001", rw: "002",
-                nik: "3273011508850001", nama: "BUDI SANTOSO", jk: "LAKI-LAKI", tempatlahir: "BANDUNG", tgllahir: "1985-08-15",
-                aktalahir: "1234/DIS/1985", goldarah: "O", agama: "ISLAM", status: "KAWIN", aktanikah: "88/KUA/2010",
-                tglkawin: "2010-05-10", aktacerai: "-", tglcerai: "", shbkel: "KEPALA KELUARGA", kelainan: "TIDAK ADA",
-                disabilitas: "TIDAK ADA", pendidikan: "S1 HUKUM", pekerjaan: "WIRASWASTA", nikibu: "3273010000000001",
-                namaibu: "SITI AMINAH", nikayah: "3273010000000002", namaayah: "SURYADI", mutasi: "TETAP", password: "123"
-            },
-            {
-                nokk: "3273012304100002", namakk: "AANG KUSNADI", alamat: "Jl. Melati No. 45", rt: "003", rw: "002",
-                nik: "3273012011900002", nama: "AANG KUSNADI", jk: "LAKI-LAKI", tempatlahir: "SUMEDANG", tgllahir: "1990-11-20",
-                aktalahir: "5678/DIS/1990", goldarah: "A", agama: "ISLAM", status: "KAWIN", aktanikah: "102/KUA/2015",
-                tglkawin: "2015-02-14", aktacerai: "-", tglcerai: "", shbkel: "KEPALA KELUARGA", kelainan: "TIDAK ADA",
-                disabilitas: "TIDAK ADA", pendidikan: "SMA", pekerjaan: "PETANI", nikibu: "3273010000000003",
-                namaibu: "NURHAYATI", nikayah: "3273010000000004", namaayah: "USMAN", mutasi: "TETAP", password: "123"
-            }
-        ];
-
-        // Default Templates Surat
-        let templatesData = [
-            {
-                id: "SKTM",
-                name: "Surat Keterangan Tidak Mampu (SKTM)",
-                code: "SKTM",
-                content: `<div style="text-align: center; margin-bottom: 20px;">
-    <h3 style="text-decoration: underline; font-weight: bold; margin:0;">SURAT KETERANGAN TIDAK MAMPU</h3>
-    <p style="margin:0; font-size:14px;">Nomor: {{NO_SURAT}}</p>
-</div>
-<p>Yang bertanda tangan di bawah ini Kepala Desa Sukamaju, Kecamatan Layanan Publik, dengan ini menerangkan bahwa:</p>
-<table style="width: 100%; margin: 15px 0; border-collapse: collapse;">
-    <tr><td style="width: 30%; py: 4px;">Nama Lengkap</td><td>: <b>{{NAMA}}</b></td></tr>
-    <tr><td>NIK / No KK</td><td>: {{NIK}} / {{NO_KK}}</td></tr>
-    <tr><td>Tempat/Tgl Lahir</td><td>: {{TEMPAT_LAHIR}}, {{TGL_LAHIR}}</td></tr>
-    <tr><td>Jenis Kelamin</td><td>: {{JK}}</td></tr>
-    <tr><td>Pekerjaan</td><td>: {{PEKERJAAN}}</td></tr>
-    <tr><td>Alamat</td><td>: {{ALAMAT}} RT {{RT}} / RW {{RW}}</td></tr>
-</table>
-<p>Bahwa nama tersebut di atas adalah benar warga penduduk Desa Sukamaju dan tergolong dalam keluarga <b>TIDAK MAMPU / MISKIN</b>.</p>
-<p>Surat keterangan ini dipergunakan untuk keperluan: <b>{{KEPERLUAN}}</b>.</p>
-<p>Demikian surat keterangan ini dibuat dengan sebenarnya agar dapat dipergunakan sebagaimana mestinya.</p>`
-            },
-            {
-                id: "SKU",
-                name: "Surat Keterangan Usaha (SKU)",
-                code: "SKU",
-                content: `<div style="text-align: center; margin-bottom: 20px;">
-    <h3 style="text-decoration: underline; font-weight: bold; margin:0;">SURAT KETERANGAN USAHA</h3>
-    <p style="margin:0; font-size:14px;">Nomor: {{NO_SURAT}}</p>
-</div>
-<p>Kepala Desa Sukamaju menerangkan bahwa:</p>
-<table style="width: 100%; margin: 15px 0;">
-    <tr><td style="width: 30%;">Nama Lengkap</td><td>: <b>{{NAMA}}</b></td></tr>
-    <tr><td>NIK</td><td>: {{NIK}}</td></tr>
-    <tr><td>Alamat</td><td>: {{ALAMAT}} RT {{RT}} / RW {{RW}}</td></tr>
-</table>
-<p>Bahwa yang bersangkutan benar memiliki usaha produktif bidang perdagangan/jasa yang bertempat di wilayah Desa Sukamaju.</p>
-<p>Keperluan: <b>{{KEPERLUAN}}</b>.</p>`
-            }
-        ];
-
-        // History Surat Keluar
-        let historyData = [
-            { noSurat: "470/001/DS-2026", nik: "3273011508850001", nama: "BUDI SANTOSO", jenisSurat: "SKTM", tanggal: "2026-10-10", content: "" }
-        ];
-
-        // --- INIT APP ---
-        window.onload = function() {
-            document.getElementById('currentDateDisplay').innerText = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            renderTemplateOptions();
-            renderPopulationTable();
-            renderTemplateTable();
-            renderHistoryTable();
-            checkConfigStatus();
-        };
-
-        function showToast(message, isError = false) {
-            const toast = document.getElementById('toast');
-            const icon = document.getElementById('toastIcon');
-            document.getElementById('toastMessage').innerText = message;
-            
-            icon.className = isError ? "fa-solid fa-circle-xmark text-rose-500 text-xl mr-3" : "fa-solid fa-circle-check text-emerald-500 text-xl mr-3";
-            toast.className = toast.className.replace('translate-y-[-100px] opacity-0', 'translate-y-0 opacity-100');
-            setTimeout(() => {
-                toast.className = toast.className.replace('translate-y-0 opacity-100', 'translate-y-[-100px] opacity-0');
-            }, 3000);
-        }
-
-        // --- AUTH & LOGIN ---
-        function switchLoginTab(type) {
-            document.getElementById('loginType').value = type;
-            const btnAdmin = document.getElementById('tabBtnAdmin');
-            const btnRes = document.getElementById('tabBtnResident');
-            const label = document.getElementById('usernameLabel');
-            const icon = document.getElementById('usernameIcon');
-            const input = document.getElementById('usernameInput');
-
-            if (type === 'admin') {
-                btnAdmin.className = "flex-1 py-2 text-sm font-semibold rounded-md transition-all bg-white text-emerald-700 shadow-sm";
-                btnRes.className = "flex-1 py-2 text-sm font-semibold rounded-md transition-all text-slate-600 hover:text-slate-900";
-                label.innerText = "Username Admin";
-                icon.className = "fa-solid fa-user-shield";
-                input.placeholder = "Masukkan username admin";
-            } else {
-                btnRes.className = "flex-1 py-2 text-sm font-semibold rounded-md transition-all bg-white text-emerald-700 shadow-sm";
-                btnAdmin.className = "flex-1 py-2 text-sm font-semibold rounded-md transition-all text-slate-600 hover:text-slate-900";
-                label.innerText = "NIK Penduduk";
-                icon.className = "fa-solid fa-id-card";
-                input.placeholder = "Masukkan 16 Digit NIK";
-            }
-        }
-
-        function handleLogin(e) {
-            e.preventDefault();
-            const type = document.getElementById('loginType').value;
-            const user = document.getElementById('usernameInput').value.trim();
-            const pass = document.getElementById('passwordInput').value.trim();
-
-            if (type === 'admin') {
-                if (user === 'admin' && pass === 'admin') {
-                    currentUser = { role: 'admin', name: 'Administrator Desa', username: 'admin' };
-                    setupDashboardUI();
-                    showToast("Berhasil masuk sebagai Admin");
-                } else {
-                    showToast("Username atau Password Admin Salah!", true);
-                }
-            } else {
-                const resident = populationData.find(p => p.nik === user && (p.password === pass || pass === '123'));
-                if (resident) {
-                    currentUser = { role: 'resident', name: resident.nama, nik: resident.nik, data: resident };
-                    setupDashboardUI();
-                    showToast(`Selamat datang, ${resident.nama}`);
-                } else {
-                    showToast("NIK atau Password Warga tidak ditemukan!", true);
-                }
-            }
-        }
-
-        function setupDashboardUI() {
-            document.getElementById('loginScreen').classList.add('hidden');
-            document.getElementById('dashboardLayout').classList.remove('hidden');
-
-            document.getElementById('userNameDisplay').innerText = currentUser.name;
-            document.getElementById('userRoleDisplay').innerText = currentUser.role === 'admin' ? 'Admin / Perangkat Desa' : 'Warga Desa';
-            document.getElementById('userAvatar').innerText = currentUser.name.charAt(0);
-
-            const adminOnlyElements = document.querySelectorAll('.admin-only');
-            const residentOnlyElements = document.querySelectorAll('.resident-only');
-
-            if (currentUser.role === 'admin') {
-                adminOnlyElements.forEach(el => el.classList.remove('hidden'));
-                residentOnlyElements.forEach(el => el.classList.add('hidden'));
-                navigateTo('dashHome');
-            } else {
-                adminOnlyElements.forEach(el => el.classList.add('hidden'));
-                residentOnlyElements.forEach(el => el.classList.remove('hidden'));
-                renderResidentViews();
-                navigateTo('residentProfile');
-            }
-            updateStats();
-        }
-
-        function handleLogout() {
-            currentUser = null;
-            document.getElementById('dashboardLayout').classList.add('hidden');
-            document.getElementById('loginScreen').classList.remove('hidden');
-            showToast("Anda telah keluar sesi");
-        }
-
-        // --- NAVIGATION ---
-        function navigateTo(viewId) {
-            document.querySelectorAll('.view-panel').forEach(panel => panel.classList.add('hidden'));
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.classList.remove('bg-emerald-600', 'text-white');
-                btn.classList.add('text-slate-400');
-            });
-
-            const targetView = document.getElementById(`view-${viewId}`);
-            const targetNav = document.getElementById(`nav-${viewId}`);
-            
-            if (targetView) targetView.classList.remove('hidden');
-            if (targetNav) {
-                targetNav.classList.add('bg-emerald-600', 'text-white');
-                targetNav.classList.remove('text-slate-400');
-            }
-
-            // Titles
-            const titles = {
-                dashHome: "Dashboard Utama", createLetter: "Buat Surat Resmi",
-                population: "Master Data Penduduk", templates: "Format Template Word",
-                history: "Arsip Surat Keluar", reports: "Laporan & Grafik",
-                residentProfile: "Profil Warga", residentLetterRequest: "Permohonan Surat",
-                residentHistory: "Riwayat Surat Warga", settings: "Pengaturan Akun"
-            };
-            document.getElementById('pageTitle').innerText = titles[viewId] || "Dashboard";
-
-            if (viewId === 'reports') renderReports();
-        }
-
-        // --- SEARCH RESIDENT LOGIC ---
-        function handleResidentSearch(query) {
-            const dropdown = document.getElementById('searchResultDropdown');
-            if (!query || query.length < 2) {
-                dropdown.classList.add('hidden');
-                return;
-            }
-
-            const results = populationData.filter(p => 
-                p.nik.includes(query) || p.nama.toLowerCase().includes(query.toLowerCase())
-            );
-
-            if (results.length === 0) {
-                dropdown.innerHTML = `<div class="p-3 text-xs text-slate-400 text-center">Data penduduk tidak ditemukan</div>`;
-            } else {
-                dropdown.innerHTML = results.map(p => `
-                    <div onclick="selectResidentForLetter('${p.nik}')" class="p-3 hover:bg-emerald-50 cursor-pointer flex justify-between items-center transition-colors">
-                        <div>
-                            <p class="font-bold text-slate-800 text-xs">${p.nama}</p>
-                            <p class="text-[11px] text-slate-500">NIK: ${p.nik} | Alamat: ${p.alamat}</p>
-                        </div>
-                        <i class="fa-solid fa-chevron-right text-xs text-emerald-600"></i>
-                    </div>
-                `).join('');
-            }
-            dropdown.classList.remove('hidden');
-        }
-
-        function selectResidentForLetter(nik) {
-            const resident = populationData.find(p => p.nik === nik);
-            if (!resident) return;
-
-            selectedResidentForLetter = resident;
-            document.getElementById('searchResultDropdown').classList.add('hidden');
-            document.getElementById('letterSearchInput').value = '';
-
-            document.getElementById('selectedNama').innerText = resident.nama;
-            document.getElementById('selectedNik').innerText = resident.nik;
-            document.getElementById('selectedKk').innerText = resident.nokk;
-            document.getElementById('selectedAlamat').innerText = resident.alamat;
-            document.getElementById('selectedRt').innerText = resident.rt;
-            document.getElementById('selectedRw').innerText = resident.rw;
-
-            document.getElementById('selectedResidentCard').classList.remove('hidden');
-        }
-
-        function clearSelectedResident() {
-            selectedResidentForLetter = null;
-            document.getElementById('selectedResidentCard').classList.add('hidden');
-        }
-
-        function quickCreateLetter(templateCode) {
-            navigateTo('createLetter');
-            document.getElementById('letterTemplateSelect').value = templateCode;
-        }
-
-        // --- LETTER GENERATION & PRINT ---
-        function renderTemplateOptions() {
-            const select = document.getElementById('letterTemplateSelect');
-            const resSelect = document.getElementById('resLetterSelect');
-            const options = templatesData.map(t => `<option value="${t.code}">${t.name}</option>`).join('');
-            if (select) select.innerHTML = options;
-            if (resSelect) resSelect.innerHTML = options;
-        }
-
-        function generateLetterPreview() {
-            if (!selectedResidentForLetter) {
-                showToast("Pilih data penduduk terlebih dahulu!", true);
-                return;
-            }
-
-            const code = document.getElementById('letterTemplateSelect').value;
-            const template = templatesData.find(t => t.code === code);
-            const noSurat = document.getElementById('letterNoInput').value;
-            const keperluan = document.getElementById('letterKeperluanInput').value || 'Keperluan Administrasi';
-
-            if (!template) return;
-
-            let htmlContent = template.content;
-            const replacements = {
-                '{{NAMA}}': selectedResidentForLetter.nama,
-                '{{NIK}}': selectedResidentForLetter.nik,
-                '{{NO_KK}}': selectedResidentForLetter.nokk,
-                '{{ALAMAT}}': selectedResidentForLetter.alamat,
-                '{{RT}}': selectedResidentForLetter.rt,
-                '{{RW}}': selectedResidentForLetter.rw,
-                '{{TEMPAT_LAHIR}}': selectedResidentForLetter.tempatlahir,
-                '{{TGL_LAHIR}}': selectedResidentForLetter.tgllahir,
-                '{{JK}}': selectedResidentForLetter.jk,
-                '{{PEKERJAAN}}': selectedResidentForLetter.pekerjaan,
-                '{{AGAMA}}': selectedResidentForLetter.agama,
-                '{{NO_SURAT}}': noSurat,
-                '{{KEPERLUAN}}': keperluan
-            };
-
-            for (const key in replacements) {
-                htmlContent = htmlContent.replace(new RegExp(key, 'g'), replacements[key]);
-            }
-
-            document.getElementById('letterDynamicBody').innerHTML = htmlContent;
-            document.getElementById('printPreviewModal').classList.remove('hidden');
-
-            // Save History
-            historyData.unshift({
-                noSurat: noSurat,
-                nik: selectedResidentForLetter.nik,
-                nama: selectedResidentForLetter.nama,
-                jenisSurat: template.code,
-                tanggal: new Date().toISOString().split('T')[0],
-                content: htmlContent
-            });
-            renderHistoryTable();
-            updateStats();
-        }
-
-        function triggerPrint() {
-            window.print();
-        }
-
-        function closePrintModal() {
-            document.getElementById('printPreviewModal').classList.add('hidden');
-        }
-
-        // --- IMPORT DOCX LOGIC (MAMMOTH JS) ---
-        function handleDocxImport(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(loadEvent) {
-                const arrayBuffer = loadEvent.target.result;
-                mammoth.convertToHtml({ arrayBuffer: arrayBuffer })
-                    .then(function(result) {
-                        const html = result.value;
-                        openTemplateEditorModal();
-                        document.getElementById('tplNameInput').value = file.name.replace('.docx', '');
-                        document.getElementById('tplCodeInput').value = 'CUSTOM-' + Math.floor(Math.random() * 100);
-                        document.getElementById('tplContentInput').value = html;
-                        showToast("File Word berhasil di-import!");
-                    })
-                    .catch(function(err) {
-                        showToast("Gagal mengonversi file Word", true);
-                    });
-            };
-            reader.readAsArrayBuffer(file);
-        }
-
-        // --- POPULATION MANAGEMENT ---
-        function renderPopulationTable() {
-            const tbody = document.getElementById('populationTableBody');
-            const search = document.getElementById('popTableSearch')?.value.toLowerCase() || '';
-
-            const filtered = populationData.filter(p => 
-                p.nama.toLowerCase().includes(search) || p.nik.includes(search) || p.nokk.includes(search)
-            );
-
-            tbody.innerHTML = filtered.map(p => `
-                <tr class="hover:bg-slate-50 border-b border-slate-100">
-                    <td class="py-2.5 px-3 font-mono">${p.nokk}</td>
-                    <td class="py-2.5 px-3 font-mono font-semibold">${p.nik}</td>
-                    <td class="py-2.5 px-3 font-bold">${p.nama}</td>
-                    <td class="py-2.5 px-3">${p.jk}</td>
-                    <td class="py-2.5 px-3">${p.tempatlahir}, ${p.tgllahir}</td>
-                    <td class="py-2.5 px-3">${p.agama}</td>
-                    <td class="py-2.5 px-3">${p.pekerjaan}</td>
-                    <td class="py-2.5 px-3 text-center">
-                        <button onclick="editResident('${p.nik}')" class="p-1 text-blue-600 hover:text-blue-800 mr-1"><i class="fa-solid fa-pen-to-square"></i></button>
-                        <button onclick="deleteResident('${p.nik}')" class="p-1 text-rose-600 hover:text-rose-800"><i class="fa-solid fa-trash"></i></button>
-                    </td>
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead class="bg-slate-100 text-slate-600 uppercase text-xs tracking-wider">
+                <tr>
+                  <th class="p-3">NIK</th>
+                  <th class="p-3">Nama Lengkap</th>
+                  <th class="p-3">Alamat / RT / RW</th>
+                  <th class="p-3">Tempat/Tgl Lahir</th>
+                  <th class="p-3">Pekerjaan</th>
+                  <th class="p-3 text-center">Aksi</th>
                 </tr>
-            `).join('');
-        }
+              </thead>
+              <tbody id="tabelPendudukBody" class="divide-y divide-slate-200">
+                <!-- Javascript Injection -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
 
-        function openResidentModal() {
-            document.getElementById('residentForm').reset();
-            document.getElementById('residentModal').classList.remove('hidden');
-        }
+      <!-- 2. TAB BUAT SURAT -->
+      <section id="tabBuatSurat" class="tab-content hidden space-y-6">
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 max-w-3xl mx-auto">
+          <h3 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-file-pen text-indigo-600"></i> Form Penerbitan Surat Online
+          </h3>
+          <form id="formBuatSurat" onsubmit="generateSuratPreview(event)" class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Pilih Jenis Surat</label>
+                <select id="pilihTemplateSurat" required class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white outline-none">
+                  <!-- Dynamic Template -->
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Cari Pemohon (NIK / Nama)</label>
+                <select id="pilihPendudukSurat" required class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white outline-none">
+                  <!-- Dynamic Penduduk -->
+                </select>
+              </div>
+            </div>
 
-        function closeResidentModal() {
-            document.getElementById('residentModal').classList.add('hidden');
-        }
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Nomor Surat Resmi</label>
+                <input type="text" id="inputNoSurat" required class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white outline-none" placeholder="Contoh: 470 / 123 / DS / 2026">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Keperluan / Tujuan Surat</label>
+                <input type="text" id="inputKeperluan" required class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white outline-none" placeholder="Contoh: Pengajuan Kredit Bank / Urusan Nikah">
+              </div>
+            </div>
 
-        function handleSaveResident(e) {
-            e.preventDefault();
-            const nik = document.getElementById('f_nik').value;
-            const newResident = {
-                nokk: document.getElementById('f_nokk').value,
-                namakk: document.getElementById('f_namakk').value,
-                alamat: document.getElementById('f_alamat').value,
-                rt: document.getElementById('f_rt').value,
-                rw: document.getElementById('f_rw').value,
-                nik: nik,
-                nama: document.getElementById('f_nama').value,
-                jk: document.getElementById('f_jk').value,
-                tempatlahir: document.getElementById('f_tempatlahir').value,
-                tgllahir: document.getElementById('f_tgllahir').value,
-                aktalahir: document.getElementById('f_aktalahir').value,
-                goldarah: document.getElementById('f_goldarah').value,
-                agama: document.getElementById('f_agama').value,
-                status: document.getElementById('f_status').value,
-                aktanikah: document.getElementById('f_aktanikah').value,
-                tglkawin: document.getElementById('f_tglkawin').value,
-                aktacerai: document.getElementById('f_aktacerai').value,
-                tglcerai: document.getElementById('f_tglcerai').value,
-                shbkel: document.getElementById('f_shbkel').value,
-                kelainan: document.getElementById('f_kelainan').value,
-                disabilitas: document.getElementById('f_disabilitas').value,
-                pendidikan: document.getElementById('f_pendidikan').value,
-                pekerjaan: document.getElementById('f_pekerjaan').value,
-                nikibu: document.getElementById('f_nikibu').value,
-                namaibu: document.getElementById('f_namaibu').value,
-                nikayah: document.getElementById('f_nikayah').value,
-                namaayah: document.getElementById('f_namaayah').value,
-                mutasi: document.getElementById('f_mutasi').value,
-                password: "123"
-            };
+            <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-eye"></i> Tampilkan Pratinjau & Cetak Surat
+            </button>
+          </form>
+        </div>
 
-            const idx = populationData.findIndex(p => p.nik === nik);
-            if (idx >= 0) populationData[idx] = newResident;
-            else populationData.push(newResident);
+        <!-- Preview Area -->
+        <div id="previewSuratContainer" class="hidden bg-white p-8 rounded-xl shadow-lg border border-slate-200 max-w-4xl mx-auto space-y-6">
+          <div class="flex justify-end gap-2 no-print">
+            <button onclick="arsipDanCetak()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-sm flex items-center gap-2 shadow">
+              <i class="fa-solid fa-print"></i> Simpan Arsip & Cetak Langsung
+            </button>
+          </div>
+          <div id="printableArea" class="p-8 bg-white border border-slate-100 shadow-sm text-slate-900 text-sm leading-relaxed">
+            <!-- Rendered Surat -->
+          </div>
+        </div>
+      </section>
 
-            renderPopulationTable();
-            closeResidentModal();
-            showToast("Data penduduk berhasil disimpan");
-            updateStats();
-        }
+      <!-- 3. TAB KELOLA TEMPLATE & IMPORT WORD -->
+      <section id="tabTemplate" class="tab-content hidden space-y-6">
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">Manajemen Template Format Surat</h3>
+            <p class="text-xs text-slate-500">Impor langsung dari file Microsoft Word (.docx) atau buat format kustom.</p>
+          </div>
+          <button onclick="openModalTemplate()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold shadow transition whitespace-nowrap">
+            <i class="fa-solid fa-plus mr-1"></i> Buat / Impor Format Baru
+          </button>
+        </div>
 
-        function editResident(nik) {
-            const p = populationData.find(item => item.nik === nik);
-            if (!p) return;
-            openResidentModal();
-            document.getElementById('f_nokk').value = p.nokk;
-            document.getElementById('f_namakk').value = p.namakk;
-            document.getElementById('f_alamat').value = p.alamat;
-            document.getElementById('f_rt').value = p.rt;
-            document.getElementById('f_rw').value = p.rw;
-            document.getElementById('f_nik').value = p.nik;
-            document.getElementById('f_nama').value = p.nama;
-            document.getElementById('f_jk').value = p.jk;
-            document.getElementById('f_tempatlahir').value = p.tempatlahir;
-            document.getElementById('f_tgllahir').value = p.tgllahir;
-            document.getElementById('f_pekerjaan').value = p.pekerjaan;
-        }
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="gridTemplateList">
+          <!-- Dynamic Templates -->
+        </div>
+      </section>
 
-        function deleteResident(nik) {
-            populationData = populationData.filter(p => p.nik !== nik);
-            renderPopulationTable();
-            showToast("Data dihapus");
-            updateStats();
-        }
-
-        // --- TEMPLATE MANAGER ---
-        function renderTemplateTable() {
-            const tbody = document.getElementById('templateTableBody');
-            tbody.innerHTML = templatesData.map(t => `
-                <tr class="hover:bg-slate-50 border-b border-slate-100">
-                    <td class="py-3 px-4 font-mono text-xs font-bold text-emerald-600">${t.code}</td>
-                    <td class="py-3 px-4 font-semibold">${t.name}</td>
-                    <td class="py-3 px-4 text-xs text-slate-500">Official Template</td>
-                    <td class="py-3 px-4 text-center">
-                        <button onclick="editTemplate('${t.id}')" class="text-blue-600 hover:text-blue-800 mr-2"><i class="fa-solid fa-pen-to-square"></i></button>
-                        <button onclick="deleteTemplate('${t.id}')" class="text-rose-600 hover:text-rose-800"><i class="fa-solid fa-trash"></i></button>
-                    </td>
+      <!-- 4. TAB ARSIP SURAT -->
+      <section id="tabArsip" class="tab-content hidden space-y-6">
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+          <h3 class="text-lg font-bold text-slate-900">Arsip Surat Keluar Desa</h3>
+          <p class="text-xs text-slate-500">Daftar riwayat surat yang pernah diterbitkan untuk penduduk.</p>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead class="bg-slate-100 text-slate-600 uppercase text-xs tracking-wider">
+                <tr>
+                  <th class="p-3">ID / Tanggal</th>
+                  <th class="p-3">No. Surat</th>
+                  <th class="p-3">Jenis Surat</th>
+                  <th class="p-3">Pemohon</th>
+                  <th class="p-3">Keperluan</th>
+                  <th class="p-3 text-center">Aksi / Cetak Ulang</th>
                 </tr>
-            `).join('');
+              </thead>
+              <tbody id="tabelArsipBody" class="divide-y divide-slate-200">
+                <!-- Javascript Injection -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. TAB LAPORAN & GRAFIK -->
+      <section id="tabLaporan" class="tab-content hidden space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h4 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+              <i class="fa-solid fa-chart-bar text-indigo-600"></i> Statistik Surat Berdasarkan Jenis (Bulanan)
+            </h4>
+            <canvas id="chartBulanan" height="200"></canvas>
+          </div>
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h4 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+              <i class="fa-solid fa-chart-line text-indigo-600"></i> Rekapitulasi Tahunan Surat Desa
+            </h4>
+            <canvas id="chartTahunan" height="200"></canvas>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- MODAL GANTI PASSWORD -->
+  <div id="modalGantiPass" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+      <h3 class="text-lg font-bold text-slate-900">Ubah Password Akun</h3>
+      <form onsubmit="submitGantiPass(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Password Lama</label>
+          <input type="password" id="passLama" required class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Password Baru</label>
+          <input type="password" id="passBaru" required class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none">
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeModalGantiPass()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-lg text-sm">Batal</button>
+          <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-sm shadow">Simpan Perubahan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL TEMPLATE WORD IMPORT -->
+  <div id="modalTemplate" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+      <h3 class="text-lg font-bold text-slate-900">Buat atau Impor Format Surat (.docx)</h3>
+      <form onsubmit="submitTemplate(event)" class="space-y-4">
+        <input type="hidden" id="tplId">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Kode Surat</label>
+            <input type="text" id="tplKode" required class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none" placeholder="470 / 510">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Nama Surat</label>
+            <input type="text" id="tplNama" required class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none" placeholder="Surat Keterangan Usaha">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Impor Berkas Word (.docx)</label>
+          <input type="file" id="fileDocxInput" accept=".docx" onchange="handleDocxImport(event)" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Isi Format Surat (HTML / Variable Tag)</label>
+          <textarea id="tplIsi" rows="8" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none font-mono" placeholder="Gunakan tag: {{NAMA_LENGKAP}}, {{NIK}}, {{ALAMAT}}, dll."></textarea>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeModalTemplate()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-lg text-sm">Batal</button>
+          <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-sm shadow">Simpan Template</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT FRONTEND LOGIC -->
+  <script>
+    // URL Backend Google Apps Script Anda (Ganti dengan Web App URL setelah dideploy di Apps Script)
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz7YSQflrRiEJBPMzG14LUFJ2juJsj66HrsOPJCdKNMmQAdER2vfvTMb9rzY9FNXhdD/exec"; 
+
+    let currentUser = null;
+    let cachePenduduk = [];
+    let cacheTemplate = [];
+    let cacheArsip = [];
+
+    // Local Mock / Storage fallback untuk testing mandiri tanpa backend online jika diinginkan
+    let localMode = true; 
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const u = document.getElementById('loginUser').value.trim();
+      const p = document.getElementById('loginPass').value.trim();
+
+      // Simulasi login default untuk uji coba instan
+      if (u === 'admin' && p === 'admin123') {
+        currentUser = { username: 'admin', nama: 'Administrator Desa', role: 'admin' };
+        initApp();
+      } else {
+        // Cek local penduduk
+        let pList = JSON.parse(localStorage.getItem('db_penduduk') || '[]');
+        let found = pList.find(x => x.NIK === u);
+        if (found || u === '33120101') {
+          currentUser = { username: u, nama: found ? found.NAMA_LENGKAP : 'Warga Desa', role: 'penduduk', detailData: found };
+          initApp();
+        } else {
+          // Default demo login
+          currentUser = { username: u, nama: 'Budi Santoso (Warga)', role: 'penduduk' };
+          initApp();
         }
+      }
+    }
 
-        function openTemplateEditorModal() {
-            document.getElementById('tplIdInput').value = '';
-            document.getElementById('tplNameInput').value = '';
-            document.getElementById('tplCodeInput').value = '';
-            document.getElementById('tplContentInput').value = '';
-            document.getElementById('templateEditorModal').classList.remove('hidden');
-        }
+    function initApp() {
+      document.getElementById('authContainer').classList.add('hidden');
+      document.getElementById('appContainer').classList.remove('hidden');
+      document.getElementById('navUserName').innerText = currentUser.nama;
+      document.getElementById('navUserRole').innerText = currentUser.role.toUpperCase();
 
-        function closeTemplateEditorModal() {
-            document.getElementById('templateEditorModal').classList.add('hidden');
-        }
+      if (currentUser.role === 'penduduk') {
+        document.getElementById('btnTambahPdk').style.display = 'none';
+      }
 
-        function handleSaveTemplate(e) {
-            e.preventDefault();
-            const id = document.getElementById('tplIdInput').value || 'TPL-' + Date.now();
-            const code = document.getElementById('tplCodeInput').value;
-            const newTpl = {
-                id: id,
-                name: document.getElementById('tplNameInput').value,
-                code: code,
-                content: document.getElementById('tplContentInput').value
-            };
+      loadInitialData();
+      renderCharts();
+    }
 
-            const idx = templatesData.findIndex(t => t.id === id);
-            if (idx >= 0) templatesData[idx] = newTpl;
-            else templatesData.push(newTpl);
+    function handleLogout() {
+      currentUser = null;
+      document.getElementById('appContainer').classList.add('hidden');
+      document.getElementById('authContainer').classList.remove('hidden');
+    }
 
-            renderTemplateTable();
-            renderTemplateOptions();
-            closeTemplateEditorModal();
-            showToast("Template surat berhasil disimpan");
-        }
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('text-indigo-600', 'bg-indigo-50');
+        btn.classList.add('text-slate-600', 'hover:bg-slate-100');
+      });
+      document.getElementById(tabId).classList.remove('hidden');
+      event.currentTarget.classList.add('text-indigo-600', 'bg-indigo-50');
+      event.currentTarget.classList.remove('text-slate-600', 'hover:bg-slate-100');
+    }
 
-        function editTemplate(id) {
-            const t = templatesData.find(item => item.id === id);
-            if (!t) return;
-            openTemplateEditorModal();
-            document.getElementById('tplIdInput').value = t.id;
-            document.getElementById('tplNameInput').value = t.name;
-            document.getElementById('tplCodeInput').value = t.code;
-            document.getElementById('tplContentInput').value = t.content;
-        }
+    // Load Data Dummy / LocalStorage
+    function loadInitialData() {
+      cachePenduduk = JSON.parse(localStorage.getItem('db_penduduk') || 'JSON.stringify([{"NIK":"3312010101900001","NAMA_LENGKAP":"Budi Santoso","ALAMAT":"Dusun Krajan","RT":"001","RW":"002","TEMPAT_LAHIR":"Wonogiri","TGL_LAHIR":"1990-05-20","PEKERJAAN":"Petani","AGAMA":"Islam"},{"NIK":"3312010202920002","NAMA_LENGKAP":"Siti Aminah","ALAMAT":"Dusun Miri","RT":"003","RW":"001","TEMPAT_LAHIR":"Wonogiri","TGL_LAHIR":"1992-08-15","PEKERJAAN":"Wiraswasta","AGAMA":"Islam"}])');
+      cacheTemplate = JSON.parse(localStorage.getItem('db_template') || 'JSON.stringify([{"ID_TEMPLATE":"TPL-SKU","KODE_SURAT":"510","NAMA_SURAT":"Surat Keterangan Usaha","ISI_TEMPLATE":"<h3 style=\"text-align:center\">PEMERINTAH KABUPATEN WONOGIRI</h3><h3 style=\"text-align:center\">KECAMATAN SLOGOHIMO - DESA TUNGGUR</h3><hr/><p style=\"text-align:center\"><b><u>SURAT KETERANGAN USAHA</u></b><br/>Nomor: {{NO_SURAT}}</p><p>Yang bertanda tangan di bawah ini Kepala Desa Tunggur Kecamatan Slogohimo Kabupaten Wonogiri, menerangkan bahwa:</p><table><tr><td>Nama Lengkap</td><td>: {{NAMA_LENGKAP}}</td></tr><tr><td>NIK</td><td>: {{NIK}}</td></tr><tr><td>Tempat/Tgl Lahir</td><td>: {{TEMPAT_LAHIR}}, {{TGL_LAHIR}}</td></tr><tr><td>Pekerjaan</td><td>: {{PEKERJAAN}}</td></tr><tr><td>Alamat</td><td>: {{ALAMAT}} RT {{RT}} RW {{RW}}</td></tr></table><p>Orang tersebut benar-benar memiliki usaha di bidang Perdagangan Umum yang berlokasi di wilayah Desa Tunggur.</p><p>Demikian surat keterangan ini dibuat untuk dipergunakan sebagaimana mestinya.</p>"}])');
+      cacheArsip = JSON.parse(localStorage.getItem('db_arsip') || '[]');
 
-        function deleteTemplate(id) {
-            templatesData = templatesData.filter(t => t.id !== id);
-            renderTemplateTable();
-            renderTemplateOptions();
-            showToast("Template dihapus");
-        }
+      renderTabelPenduduk();
+      populateDropdowns();
+      renderTemplateList();
+      renderTabelArsip();
+    }
 
-        // --- HISTORY & ARSIP ---
-        function renderHistoryTable() {
-            const tbody = document.getElementById('historyTableBody');
-            const recentBody = document.getElementById('recentHistoryTable');
-            
-            const html = historyData.map(h => `
-                <tr class="hover:bg-slate-50 border-b border-slate-100">
-                    <td class="py-2.5 px-3 font-mono font-semibold">${h.noSurat}</td>
-                    <td class="py-2.5 px-3 font-mono text-slate-500">${h.nik}</td>
-                    <td class="py-2.5 px-3 font-bold text-slate-800">${h.nama}</td>
-                    <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 font-bold">${h.jenisSurat}</span></td>
-                    <td class="py-2.5 px-3 text-slate-500">${h.tanggal}</td>
-                    <td class="py-2.5 px-3 text-center">
-                        <button onclick="reprintLetter('${h.noSurat}')" class="px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 text-emerald-700 rounded text-xs font-semibold">
-                            <i class="fa-solid fa-print mr-1"></i> Cetak
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
+    // Render Penduduk
+    function renderTabelPenduduk(data = cachePenduduk) {
+      const tbody = document.getElementById('tabelPendudukBody');
+      tbody.innerHTML = data.map(p => `
+        <tr class="hover:bg-slate-50 transition">
+          <td class="p-3 font-semibold text-indigo-900">${p.NIK}</td>
+          <td class="p-3">${p.NAMA_LENGKAP}</td>
+          <td class="p-3">${p.ALAMAT} RT ${p.RT}/RW ${p.RW}</td>
+          <td class="p-3">${p.TEMPAT_LAHIR}, ${p.TGL_LAHIR}</td>
+          <td class="p-3">${p.PEKERJAAN}</td>
+          <td class="p-3 text-center">
+            <button onclick="buatSuratLangsung('${p.NIK}')" class="px-3 py-1 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded text-xs font-semibold transition">Buat Surat</button>
+          </td>
+        </tr>
+      `).join('');
+    }
 
-            if (tbody) tbody.innerHTML = html;
-            if (recentBody) recentBody.innerHTML = html;
-        }
+    function filterPenduduk() {
+      const q = document.getElementById('searchPendudukInput').value.toLowerCase();
+      const filtered = cachePenduduk.filter(p => p.NIK.toLowerCase().includes(q) || p.NAMA_LENGKAP.toLowerCase().includes(q));
+      renderTabelPenduduk(filtered);
+    }
 
-        function reprintLetter(noSurat) {
-            const h = historyData.find(item => item.noSurat === noSurat);
-            if (!h) return;
-            document.getElementById('letterDynamicBody').innerHTML = h.content;
-            document.getElementById('printPreviewModal').classList.remove('hidden');
-        }
+    // Dropdown populate
+    function populateDropdowns() {
+      const selTpl = document.getElementById('pilihTemplateSurat');
+      selTpl.innerHTML = cacheTemplate.map(t => `<option value="${t.ID_TEMPLATE}">${t.NAMA_SURAT} (${t.KODE_SURAT})</option>`).join('');
 
-        // --- REPORTS & CHARTS ---
-        let monthlyChartInstance = null;
-        let letterTypeChartInstance = null;
+      const selPdk = document.getElementById('pilihPendudukSurat');
+      selPdk.innerHTML = cachePenduduk.map(p => `<option value="${p.NIK}">${p.NIK} - ${p.NAMA_LENGKAP}</option>`).join('');
+    }
 
-        function renderReports() {
-            const ctxMonthly = document.getElementById('monthlyChart')?.getContext('2d');
-            const ctxType = document.getElementById('letterTypeChart')?.getContext('2d');
+    function buatSuratLangsung(nik) {
+      document.getElementById('pilihPendudukSurat').value = nik;
+      switchTab('tabBuatSurat');
+      document.getElementById('btnTabBuatSurat').click();
+    }
 
-            if (!ctxMonthly || !ctxType) return;
+    // Generate Surat Preview
+    function generateSuratPreview(e) {
+      e.preventDefault();
+      const tplId = document.getElementById('pilihTemplateSurat').value;
+      const nik = document.getElementById('pilihPendudukSurat').value;
+      const noSurat = document.getElementById('inputNoSurat').value;
+      const keperluan = document.getElementById('inputKeperluan').value;
 
-            if (monthlyChartInstance) monthlyChartInstance.destroy();
-            if (letterTypeChartInstance) letterTypeChartInstance.destroy();
+      const tpl = cacheTemplate.find(t => t.ID_TEMPLATE === tplId);
+      const p = cachePenduduk.find(x => x.NIK === nik);
 
-            monthlyChartInstance = new Chart(ctxMonthly, {
-                type: 'bar',
-                data: {
-                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
-                    datasets: [{
-                        label: 'Jumlah Surat Diterbitkan',
-                        data: [12, 19, 15, 8, 22, 14, 25, 18, 30, historyData.length + 5, 0, 0],
-                        backgroundColor: '#10b981'
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
+      if (!tpl || !p) return alert('Data template atau penduduk tidak valid.');
 
-            letterTypeChartInstance = new Chart(ctxType, {
-                type: 'doughnut',
-                data: {
-                    labels: ['SKTM', 'SKU', 'Domisili'],
-                    datasets: [{
-                        data: [45, 30, 25],
-                        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b']
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
+      let htmlContent = tpl.ISI_TEMPLATE;
+      // Replace variables
+      const replacements = {
+        '{{NO_SURAT}}': noSurat,
+        '{{TGL_SURAT}}': new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'}),
+        '{{KEPERLUAN}}': keperluan,
+        '{{NIK}}': p.NIK,
+        '{{NAMA_LENGKAP}}': p.NAMA_LENGKAP,
+        '{{ALAMAT}}': p.ALAMAT,
+        '{{RT}}': p.RT,
+        '{{RW}}': p.RW,
+        '{{TEMPAT_LAHIR}}': p.TEMPAT_LAHIR,
+        '{{TGL_LAHIR}}': p.TGL_LAHIR,
+        '{{PEKERJAAN}}': p.PEKERJAAN,
+        '{{AGAMA}}': p.AGAMA
+      };
 
-            // Summary Table
-            const summaryTable = document.getElementById('reportSummaryTable');
-            summaryTable.innerHTML = `
-                <tr class="border-b border-slate-100"><td class="py-2.5 px-4 font-semibold">Oktober 2026</td><td class="py-2.5 px-4">12</td><td class="py-2.5 px-4">8</td><td class="py-2.5 px-4">5</td><td class="py-2.5 px-4 font-bold text-emerald-600">25</td></tr>
-                <tr class="border-b border-slate-100"><td class="py-2.5 px-4 font-semibold">September 2026</td><td class="py-2.5 px-4">15</td><td class="py-2.5 px-4">10</td><td class="py-2.5 px-4">5</td><td class="py-2.5 px-4 font-bold text-emerald-600">30</td></tr>
-            `;
-        }
+      for (let key in replacements) {
+        htmlContent = htmlContent.replaceAll(key, replacements[key]);
+      }
 
-        // --- RESIDENT LOGIC ---
-        function renderResidentViews() {
-            if (!currentUser || currentUser.role !== 'resident') return;
-            const res = currentUser.data;
+      document.getElementById('printableArea').innerHTML = htmlContent;
+      document.getElementById('previewSuratContainer').classList.remove('hidden');
+    }
 
-            // Render Profile 28 fields
-            const profileDiv = document.getElementById('residentProfileDetails');
-            profileDiv.innerHTML = Object.keys(res).map(key => `
-                <div class="bg-slate-50 p-2.5 rounded border border-slate-200">
-                    <span class="text-slate-400 block uppercase font-bold text-[10px]">${key}</span>
-                    <span class="font-semibold text-slate-800">${res[key] || '-'}</span>
-                </div>
-            `).join('');
+    function arsipDanCetak() {
+      const noSurat = document.getElementById('inputNoSurat').value;
+      const tplId = document.getElementById('pilihTemplateSurat').value;
+      const nik = document.getElementById('pilihPendudukSurat').value;
+      const p = cachePenduduk.find(x => x.NIK === nik);
+      const tpl = cacheTemplate.find(t => t.ID_TEMPLATE === tplId);
 
-            // Resident History Table
-            const resHistory = historyData.filter(h => h.nik === res.nik);
-            document.getElementById('residentHistoryBody').innerHTML = resHistory.map(h => `
-                <tr class="border-b border-slate-100">
-                    <td class="py-2 px-3 font-mono">${h.noSurat}</td>
-                    <td class="py-2 px-3 font-semibold">${h.jenisSurat}</td>
-                    <td class="py-2 px-3">${h.tanggal}</td>
-                    <td class="py-2 px-3 text-center">
-                        <button onclick="reprintLetter('${h.noSurat}')" class="px-2 py-1 bg-emerald-600 text-white rounded text-xs font-semibold">Cetak</button>
-                    </td>
-                </tr>
-            `).join('');
-        }
+      const arsipBaru = {
+        ID_SURAT: 'SRT-' + Date.now(),
+        NO_SURAT: noSurat,
+        TGL_SURAT: new Date().toISOString().slice(0,10),
+        NAMA_SURAT: tpl.NAMA_SURAT,
+        NAMA_PEMOHON: p.NAMA_LENGKAP,
+        KEPERLUAN: document.getElementById('inputKeperluan').value,
+        ISIAN_LENGKAP: document.getElementById('printableArea').innerHTML
+      };
 
-        function residentGenerateLetter() {
-            selectedResidentForLetter = currentUser.data;
-            const code = document.getElementById('resLetterSelect').value;
-            const keperluan = document.getElementById('resKeperluan').value || 'Keperluan Warga';
+      cacheArsip.unshift(arsipBaru);
+      localStorage.setItem('db_arsip', JSON.stringify(cacheArsip));
+      renderTabelArsip();
 
-            document.getElementById('letterTemplateSelect').value = code;
-            document.getElementById('letterKeperluanInput').value = keperluan;
-            generateLetterPreview();
-        }
+      window.print();
+    }
 
-        // --- SETTINGS & CONFIG ---
-        function handleChangePassword(e) {
-            e.preventDefault();
-            const newPass = document.getElementById('newPassInput').value;
-            const confPass = document.getElementById('confirmPassInput').value;
+    // Template Manager & Word Import
+    function renderTemplateList() {
+      const grid = document.getElementById('gridTemplateList');
+      grid.innerHTML = cacheTemplate.map(t => `
+        <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+          <div>
+            <span class="text-xs font-semibold px-2 py-1 bg-indigo-50 text-indigo-600 rounded-md">Kode: ${t.KODE_SURAT}</span>
+            <h4 class="font-bold text-slate-800 mt-2">${t.NAMA_SURAT}</h4>
+            <p class="text-xs text-slate-400 mt-1">ID: ${t.ID_TEMPLATE}</p>
+          </div>
+          <div class="mt-4 flex gap-2">
+            <button onclick="editTemplate('${t.ID_TEMPLATE}')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold">Edit</button>
+            <button onclick="hapusTemplate('${t.ID_TEMPLATE}')" class="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-semibold">Hapus</button>
+          </div>
+        </div>
+      `).join('');
+    }
 
-            if (newPass !== confPass) {
-                showToast("Konfirmasi password tidak cocok!", true);
-                return;
-            }
+    function openModalTemplate() {
+      document.getElementById('tplId').value = '';
+      document.getElementById('tplKode').value = '';
+      document.getElementById('tplNama').value = '';
+      document.getElementById('tplIsi').value = '';
+      document.getElementById('modalTemplate').classList.remove('hidden');
+      document.getElementById('modalTemplate').classList.add('flex');
+    }
 
-            if (currentUser.role === 'resident') {
-                currentUser.data.password = newPass;
-            }
-            showToast("Password berhasil diperbarui!");
-            document.getElementById('newPassInput').value = '';
-            document.getElementById('confirmPassInput').value = '';
-        }
+    function closeModalTemplate() {
+      document.getElementById('modalTemplate').classList.add('hidden');
+      document.getElementById('modalTemplate').classList.remove('flex');
+    }
 
-        function openConfigModal() {
-            document.getElementById('webAppUrlInput').value = webAppUrl;
-            document.getElementById('configModal').classList.remove('hidden');
-        }
+    // Mammoth.js docx import handler
+    function handleDocxImport(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(loadEvent) {
+        mammoth.convertToHtml({arrayBuffer: loadEvent.target.result})
+          .then(result => {
+            document.getElementById('tplIsi').value = result.value;
+            alert('File Word berhasil diimpor ke format HTML template!');
+          })
+          .catch(err => alert('Gagal membaca file Word: ' + err.message));
+      };
+      reader.readAsArrayBuffer(file);
+    }
 
-        function closeConfigModal() {
-            document.getElementById('configModal').classList.add('hidden');
-        }
+    function submitTemplate(e) {
+      e.preventDefault();
+      const id = document.getElementById('tplId').value || 'TPL-' + Date.now();
+      const newTpl = {
+        ID_TEMPLATE: id,
+        KODE_SURAT: document.getElementById('tplKode').value,
+        NAMA_SURAT: document.getElementById('tplNama').value,
+        ISI_TEMPLATE: document.getElementById('tplIsi').value
+      };
 
-        function saveConfigUrl() {
-            webAppUrl = document.getElementById('webAppUrlInput').value.trim();
-            localStorage.setItem('simdesa_webapp_url', webAppUrl);
-            checkConfigStatus();
-            closeConfigModal();
-            showToast("URL Web App Google Sheets disimpan");
-        }
+      const idx = cacheTemplate.findIndex(t => t.ID_TEMPLATE === id);
+      if (idx > -1) cacheTemplate[idx] = newTpl;
+      else cacheTemplate.push(newTpl);
 
-        function checkConfigStatus() {
-            const badge = document.getElementById('bgDbStatus');
-            if (webAppUrl) {
-                badge.className = "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800";
-                badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span> Google Sheets Connected`;
-            } else {
-                badge.className = "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800";
-                badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5 animate-pulse"></span> Mode Demo Local`;
-            }
-        }
+      localStorage.setItem('db_template', JSON.stringify(cacheTemplate));
+      closeModalTemplate();
+      loadInitialData();
+    }
 
-        function updateStats() {
-            document.getElementById('statTotalPenduduk').innerText = populationData.length;
-            document.getElementById('statTotalSurat').innerText = historyData.length;
-            document.getElementById('statTotalTemplates').innerText = templatesData.length;
-            document.getElementById('statSuratBulanIni').innerText = historyData.length;
-        }
-    </script>
+    function hapusTemplate(id) {
+      if (confirm('Yakin ingin menghapus template surat ini?')) {
+        cacheTemplate = cacheTemplate.filter(t => t.ID_TEMPLATE !== id);
+        localStorage.setItem('db_template', JSON.stringify(cacheTemplate));
+        loadInitialData();
+      }
+    }
+
+    // Arsip Tab
+    function renderTabelArsip() {
+      const tbody = document.getElementById('tabelArsipBody');
+      tbody.innerHTML = cacheArsip.map(a => `
+        <tr class="hover:bg-slate-50 transition">
+          <td class="p-3 text-xs text-slate-500">${a.TGL_SURAT}</td>
+          <td class="p-3 font-semibold text-indigo-900">${a.NO_SURAT}</td>
+          <td class="p-3">${a.NAMA_SURAT}</td>
+          <td class="p-3">${a.NAMA_PEMOHON}</td>
+          <td class="p-3">${a.KEPERLUAN}</td>
+          <td class="p-3 text-center">
+            <button onclick="cetakUlangArsip('${a.ID_SURAT}')" class="px-3 py-1 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded text-xs font-semibold transition">Cetak Ulang</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function cetakUlangArsip(id) {
+      const arsip = cacheArsip.find(x => x.ID_SURAT === id);
+      if (arsip) {
+        document.getElementById('printableArea').innerHTML = arsip.ISIAN_LENGKAP;
+        window.print();
+      }
+    }
+
+    // Grafik Chart.js
+    function renderCharts() {
+      const ctx1 = document.getElementById('chartBulanan').getContext('2d');
+      new Chart(ctx1, {
+        type: 'bar',
+        data: {
+          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
+          datasets: [{
+            label: 'Jumlah Surat Diterbitkan',
+            data: [12, 19, 15, 22, 30, 25, 28, 35, 40, 45, 38, 50],
+            backgroundColor: '#4f46e5',
+            borderRadius: 6
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+
+      const ctx2 = document.getElementById('chartTahunan').getContext('2d');
+      new Chart(ctx2, {
+        type: 'line',
+        data: {
+          labels: ['2023', '2024', '2025', '2026'],
+          datasets: [{
+            label: 'Total Surat Tahunan',
+            data: [240, 310, 420, 580],
+            borderColor: '#06b6d4',
+            backgroundColor: 'rgba(6, 182, 212, 0.1)',
+            fill: true,
+            tension: 0.3
+          }]
+        },
+        options: { responsive: true }
+      });
+    }
+
+    // Modal Ganti Password
+    function openModalGantiPass() {
+      document.getElementById('modalGantiPass').classList.remove('hidden');
+      document.getElementById('modalGantiPass').classList.add('flex');
+    }
+    function closeModalGantiPass() {
+      document.getElementById('modalGantiPass').classList.add('hidden');
+      document.getElementById('modalGantiPass').classList.remove('flex');
+    }
+    function submitGantiPass(e) {
+      e.preventDefault();
+      alert('Password berhasil diperbarui.');
+      closeModalGantiPass();
+    }
+  </script>
 </body>
 </html>
