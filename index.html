@@ -228,19 +228,35 @@
     let listPendudukCache = [];
     let activeExtraFields = [];
 
+    // CEK SESI LOGIN SAAT HALAMAN DIMUAT (Cegah Logout saat Refresh)
+    document.addEventListener("DOMContentLoaded", () => {
+        const savedUser = localStorage.getItem('sistem_surat_user');
+        if (savedUser) {
+            currentUser = JSON.parse(savedUser);
+            initApp();
+        }
+    });
+
     // LOGIN & AUTH
     document.getElementById('formLogin').addEventListener('submit', async (e) => {
         e.preventDefault();
+        const btn = e.target.querySelector('button');
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
+        
         const res = await apiCall({
             action: 'login',
             username: document.getElementById('loginUsername').value,
             password: document.getElementById('loginPassword').value
         });
+        
+        btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Login';
+
         if (res.success) {
             currentUser = res.user;
+            localStorage.setItem('sistem_surat_user', JSON.stringify(currentUser));
             initApp();
         } else {
-            alert(res.message);
+            alert(res.message || "Login gagal!");
         }
     });
 
@@ -259,10 +275,11 @@
     }
 
     function logout() {
+        localStorage.removeItem('sistem_surat_user');
         location.reload();
     }
 
-    function showPage(pageId) {
+   function showPage(pageId) {
         document.querySelectorAll('.page-content').forEach(p => p.classList.add('d-none'));
         document.querySelectorAll('.sidebar .nav-link').forEach(l => l.classList.remove('active'));
         
@@ -273,26 +290,36 @@
         if (pageId === 'laporan') loadLaporan();
     }
 
-    // API CALL HELPER
+    // API CALL HELPER DENGAN ERROR LOGGING
     async function apiCall(payload) {
         try {
             const res = await fetch(SCRIPT_URL, {
                 method: 'POST',
                 body: JSON.stringify(payload)
             });
-            return await res.json();
+            const text = await res.text();
+            try {
+                return JSON.parse(text);
+            } catch (err) {
+                console.error("Respon bukan JSON:", text);
+                alert("Kesalahan server: Pastikan URL Apps Script benar dan akses deployment diatur ke 'Anyone'.");
+                return { success: false };
+            }
         } catch(e) {
-            alert("Error koneksi ke server database!");
+            console.error("Network Error:", e);
+            alert("Gagal terhubung ke server database! Periksa koneksi internet.");
             return { success: false };
         }
     }
 
-    // PENDUDUK SEARCH & MANAGING
+    /// PENDUDUK DATA & SEARCH
     async function loadPendudukData() {
         const res = await apiCall({ action: 'getPenduduk' });
-        if(res.success) {
+        if(res && res.success) {
             listPendudukCache = res.data;
             renderTabelPenduduk();
+        } else {
+            console.warn("Gagal memuat data penduduk atau data kosong.");
         }
     }
 
@@ -306,14 +333,18 @@
             String(p.NIK).toLowerCase().includes(q) || String(p.Nama_Lengkap).toLowerCase().includes(q)
         );
 
+        if(results.length === 0) {
+            box.innerHTML = `<div class="p-2 text-danger small">Penduduk tidak ditemukan.</div>`;
+            return;
+        }
+
         results.forEach(p => {
             const item = document.createElement('a');
             item.className = 'list-group-item list-group-item-action small';
             item.innerHTML = `<b>${p.Nama_Lengkap}</b> (${p.NIK}) - ${p.Alamat}`;
             item.onclick = () => {
                 selectedPenduduk = p;
-                alert('Pemohon Dipilih: ' + p.Nama_Lengkap);
-                box.innerHTML = `<div class="alert alert-info py-1 mb-0">Dipilih: <b>${p.Nama_Lengkap}</b></div>`;
+                box.innerHTML = `<div class="alert alert-success py-1 mb-0 small">Dipilih: <b>${p.Nama_Lengkap} (${p.NIK})</b></div>`;
             };
             box.appendChild(item);
         });
@@ -321,16 +352,24 @@
 
     function renderTabelPenduduk() {
         const tbody = document.getElementById('tblPendudukBody');
+        if(!tbody) return;
         tbody.innerHTML = '';
         const filter = document.getElementById('cariPendudukTabel').value.toLowerCase();
         
-        listPendudukCache.filter(p => 
+        const filtered = listPendudukCache.filter(p => 
             String(p.NIK).toLowerCase().includes(filter) || String(p.Nama_Lengkap).toLowerCase().includes(filter)
-        ).forEach(p => {
+        );
+
+        if(filtered.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted">Belum ada data penduduk / data kosong.</td></tr>`;
+            return;
+        }
+
+        filtered.forEach(p => {
             tbody.innerHTML += `<tr>
                 <td>${p.NIK}</td><td><b>${p.Nama_Lengkap}</b></td><td>${p.No_KK}</td>
-                <td>${p.Alamat}</td><td>${p.RT}/${p.RW}</td><td>${p.Jenis_Kelamin}</td><td>${p.Tgl_Lahir}</td>
-                <td><button class="btn btn-sm btn-warning" onclick="editPenduduk('${p.NIK}')"><i class="fa-solid fa-edit"></i></button></td>
+                <td>${p.Alamat || ''}</td><td>${p.RT || ''}/${p.RW || ''}</td><td>${p.Jenis_Kelamin || ''}</td><td>${p.Tgl_Lahir || ''}</td>
+                <td><span class="badge bg-success">Aktif</span></td>
             </tr>`;
         });
     }
@@ -384,24 +423,25 @@
 
     async function loadFormatSurat() {
         const res = await apiCall({ action: 'getFormatSurat' });
-        if(res.success) {
+        if(res && res.success) {
             listFormatSurat = res.data;
             const sel = document.getElementById('selectFormatSurat');
             const tbody = document.getElementById('tblFormatBody');
-            sel.innerHTML = '<option value="">-- Pilih Jenis Surat --</option>';
-            tbody.innerHTML = '';
+            if(sel) sel.innerHTML = '<option value="">-- Pilih Jenis Surat --</option>';
+            if(tbody) tbody.innerHTML = '';
 
             listFormatSurat.forEach(f => {
-                sel.innerHTML += `<option value="${f.id}">${f.nama}</option>`;
-                tbody.innerHTML += `<tr>
-                    <td>${f.kode}</td><td><b>${f.nama}</b></td>
-                    <td>${f.extraFields.join(', ')}</td>
-                    <td><button class="btn btn-sm btn-danger" onclick="hapusFormat('${f.id}')"><i class="fa-solid fa-trash"></i></button></td>
-                </tr>`;
+                if(sel) sel.innerHTML += `<option value="${f.id}">${f.nama}</option>`;
+                if(tbody) {
+                    tbody.innerHTML += `<tr>
+                        <td>${f.kode}</td><td><b>${f.nama}</b></td>
+                        <td>${f.extraFields ? f.extraFields.join(', ') : '-'}</td>
+                        <td><button class="btn btn-sm btn-danger" onclick="hapusFormat('${f.id}')"><i class="fa-solid fa-trash"></i></button></td>
+                    </tr>`;
+                }
             });
         }
     }
-
     async function hapusFormat(id) {
         if(confirm("Hapus format surat ini?")) {
             await apiCall({ action: 'deleteFormatSurat', id: id });
